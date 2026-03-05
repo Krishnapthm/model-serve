@@ -35,17 +35,24 @@ def create_app() -> FastAPI:
     settings = Settings()
 
     # CORS
+    cors_origins = settings.cors_origins or ["*"]
+    allow_all_origins = "*" in cors_origins
+    allow_credentials = settings.cors_allow_credentials and not allow_all_origins
+
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=settings.cors_origins,
-        allow_credentials=True,
+        allow_origins=["*"] if allow_all_origins else cors_origins,
+        allow_origin_regex=settings.cors_origin_regex,
+        allow_credentials=allow_credentials,
         allow_methods=["*"],
         allow_headers=["*"],
     )
 
     # Exception handlers
     @app.exception_handler(exceptions.ModelNotFoundError)
-    async def model_not_found_handler(request: Request, exc: exceptions.ModelNotFoundError):
+    async def model_not_found_handler(
+        request: Request, exc: exceptions.ModelNotFoundError
+    ):
         return JSONResponse(
             status_code=404,
             content={"detail": str(exc), "code": error_codes.MODEL_NOT_FOUND},
@@ -66,14 +73,18 @@ def create_app() -> FastAPI:
         )
 
     @app.exception_handler(exceptions.ServedModelNotFoundError)
-    async def served_model_not_found_handler(request: Request, exc: exceptions.ServedModelNotFoundError):
+    async def served_model_not_found_handler(
+        request: Request, exc: exceptions.ServedModelNotFoundError
+    ):
         return JSONResponse(
             status_code=404,
             content={"detail": str(exc), "code": error_codes.SERVED_MODEL_NOT_FOUND},
         )
 
     @app.exception_handler(exceptions.GPUUnavailableError)
-    async def gpu_unavailable_handler(request: Request, exc: exceptions.GPUUnavailableError):
+    async def gpu_unavailable_handler(
+        request: Request, exc: exceptions.GPUUnavailableError
+    ):
         return JSONResponse(
             status_code=503,
             content={"detail": str(exc), "code": error_codes.GPU_UNAVAILABLE},
@@ -86,10 +97,38 @@ def create_app() -> FastAPI:
             content={"detail": str(exc), "code": error_codes.VLLM_ERROR},
         )
 
+    @app.exception_handler(exceptions.UserAlreadyExistsError)
+    async def user_exists_handler(
+        request: Request, exc: exceptions.UserAlreadyExistsError
+    ):
+        return JSONResponse(
+            status_code=409,
+            content={"detail": str(exc), "code": error_codes.USER_ALREADY_EXISTS},
+        )
+
+    @app.exception_handler(exceptions.InvalidCredentialsError)
+    async def invalid_credentials_handler(
+        request: Request, exc: exceptions.InvalidCredentialsError
+    ):
+        return JSONResponse(
+            status_code=401,
+            content={"detail": str(exc), "code": error_codes.INVALID_CREDENTIALS},
+        )
+
+    @app.exception_handler(exceptions.InvalidAuthTokenError)
+    async def invalid_auth_token_handler(
+        request: Request, exc: exceptions.InvalidAuthTokenError
+    ):
+        return JSONResponse(
+            status_code=401,
+            content={"detail": str(exc), "code": error_codes.INVALID_AUTH_TOKEN},
+        )
+
     # Routers
-    from app.api.v1 import models, serve, keys, health
+    from app.api.v1 import auth, models, serve, keys, health
 
     app.include_router(health.router, prefix=settings.api_v1_prefix, tags=["health"])
+    app.include_router(auth.router, prefix=settings.api_v1_prefix, tags=["auth"])
     app.include_router(models.router, prefix=settings.api_v1_prefix, tags=["models"])
     app.include_router(serve.router, prefix=settings.api_v1_prefix, tags=["serve"])
     app.include_router(keys.router, prefix=settings.api_v1_prefix, tags=["keys"])

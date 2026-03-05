@@ -6,7 +6,7 @@ from datetime import datetime
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.security import generate_api_key, hash_key, verify_key, extract_prefix
+from app.core.security import generate_api_key, hash_key, extract_prefix
 from app.models.api_key import APIKey
 from app.schemas.keys import KeyRead, KeyCreated
 from app.utils.exceptions import KeyNotFoundError
@@ -18,17 +18,19 @@ class APIKeyService:
     def __init__(self, db: AsyncSession) -> None:
         self.db = db
 
-    async def create(self, name: str) -> KeyCreated:
+    async def create(self, name: str, owner_id: uuid.UUID) -> KeyCreated:
         """Create a new API key.
 
         Args:
             name: User-provided label for the key.
+            owner_id: User ID that owns the key.
 
         Returns:
             KeyCreated schema with the full key (shown once).
         """
         raw_key = generate_api_key()
         key_record = APIKey(
+            owner_id=owner_id,
             name=name,
             key_hash=hash_key(raw_key),
             key_prefix=extract_prefix(raw_key),
@@ -45,14 +47,19 @@ class APIKeyService:
             created_at=key_record.created_at,
         )
 
-    async def list_all(self) -> list[KeyRead]:
+    async def list_all(self, owner_id: uuid.UUID) -> list[KeyRead]:
         """List all active API keys (prefix + metadata only).
+
+        Args:
+            owner_id: User ID that owns the keys.
 
         Returns:
             List of KeyRead schemas.
         """
         result = await self.db.execute(
-            select(APIKey).where(APIKey.is_active == True).order_by(APIKey.created_at.desc())
+            select(APIKey)
+            .where(APIKey.owner_id == owner_id, APIKey.is_active == True)
+            .order_by(APIKey.created_at.desc())
         )
         keys = result.scalars().all()
 
@@ -68,11 +75,12 @@ class APIKeyService:
             for k in keys
         ]
 
-    async def revoke(self, key_id: str) -> dict:
+    async def revoke(self, key_id: str, owner_id: uuid.UUID) -> dict:
         """Soft-delete an API key.
 
         Args:
             key_id: UUID of the key to revoke.
+            owner_id: User ID that owns the key.
 
         Returns:
             Confirmation dict.
@@ -81,7 +89,10 @@ class APIKeyService:
             KeyNotFoundError: If the key doesn't exist.
         """
         result = await self.db.execute(
-            select(APIKey).where(APIKey.id == uuid.UUID(key_id))
+            select(APIKey).where(
+                APIKey.id == uuid.UUID(key_id),
+                APIKey.owner_id == owner_id,
+            )
         )
         key = result.scalar_one_or_none()
         if not key:

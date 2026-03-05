@@ -26,11 +26,14 @@ class VLLMManager:
         except docker.errors.DockerException:
             self._docker = None
 
-    async def serve(self, model_id: str, gpu_type: str = "cuda") -> dict:
+    async def serve(
+        self, model_id: str, owner_id: uuid.UUID, gpu_type: str = "cuda"
+    ) -> dict:
         """Pull and serve a model via vLLM.
 
         Args:
             model_id: HuggingFace model ID.
+            owner_id: User ID that owns the served model and generated key.
             gpu_type: GPU backend — ``cuda`` or ``rocm``.
 
         Returns:
@@ -42,6 +45,7 @@ class VLLMManager:
         # Create an API key for this served model
         raw_key = generate_api_key()
         key_record = APIKey(
+            owner_id=owner_id,
             name=f"auto:{model_id}",
             key_hash=hash_key(raw_key),
             key_prefix=extract_prefix(raw_key),
@@ -54,6 +58,7 @@ class VLLMManager:
 
         # Create served model record
         served = ServedModel(
+            owner_id=owner_id,
             model_id=model_id,
             display_name=model_id.split("/")[-1] if "/" in model_id else model_id,
             pipeline_tag=None,  # Will be updated when we have HF info
@@ -68,9 +73,12 @@ class VLLMManager:
             try:
                 env = {"HUGGING_FACE_HUB_TOKEN": self.settings.hf_token}
                 cmd = [
-                    "--model", model_id,
-                    "--host", "0.0.0.0",
-                    "--port", str(port),
+                    "--model",
+                    model_id,
+                    "--host",
+                    "0.0.0.0",
+                    "--port",
+                    str(port),
                 ]
 
                 device_requests = []
@@ -118,11 +126,12 @@ class VLLMManager:
             },
         }
 
-    async def stop(self, served_model_id: str) -> dict:
+    async def stop(self, served_model_id: str, owner_id: uuid.UUID) -> dict:
         """Stop a served model and remove its container.
 
         Args:
             served_model_id: UUID of the served model record.
+            owner_id: User ID that owns the served model.
 
         Returns:
             Updated served model data.
@@ -131,11 +140,16 @@ class VLLMManager:
             ServedModelNotFoundError: If the record doesn't exist.
         """
         result = await self.db.execute(
-            select(ServedModel).where(ServedModel.id == uuid.UUID(served_model_id))
+            select(ServedModel).where(
+                ServedModel.id == uuid.UUID(served_model_id),
+                ServedModel.owner_id == owner_id,
+            )
         )
         served = result.scalar_one_or_none()
         if not served:
-            raise ServedModelNotFoundError(f"Served model '{served_model_id}' not found")
+            raise ServedModelNotFoundError(
+                f"Served model '{served_model_id}' not found"
+            )
 
         # Stop Docker container
         if self._docker and served.container_id:
@@ -161,11 +175,12 @@ class VLLMManager:
             "stopped_at": served.stopped_at.isoformat() if served.stopped_at else None,
         }
 
-    async def get_status(self, served_model_id: str) -> dict:
+    async def get_status(self, served_model_id: str, owner_id: uuid.UUID) -> dict:
         """Get the current status of a served model.
 
         Args:
             served_model_id: UUID of the served model record.
+            owner_id: User ID that owns the served model.
 
         Returns:
             Served model data.
@@ -174,14 +189,23 @@ class VLLMManager:
             ServedModelNotFoundError: If the record doesn't exist.
         """
         result = await self.db.execute(
-            select(ServedModel).where(ServedModel.id == uuid.UUID(served_model_id))
+            select(ServedModel).where(
+                ServedModel.id == uuid.UUID(served_model_id),
+                ServedModel.owner_id == owner_id,
+            )
         )
         served = result.scalar_one_or_none()
         if not served:
-            raise ServedModelNotFoundError(f"Served model '{served_model_id}' not found")
+            raise ServedModelNotFoundError(
+                f"Served model '{served_model_id}' not found"
+            )
 
         # Optionally sync with Docker container state
-        if self._docker and served.container_id and served.status == ModelStatus.PENDING:
+        if (
+            self._docker
+            and served.container_id
+            and served.status == ModelStatus.PENDING
+        ):
             try:
                 container = self._docker.containers.get(served.container_id)
                 if container.status == "running":
@@ -203,14 +227,19 @@ class VLLMManager:
             "stopped_at": served.stopped_at.isoformat() if served.stopped_at else None,
         }
 
-    async def list_served(self) -> list[dict]:
+    async def list_served(self, owner_id: uuid.UUID) -> list[dict]:
         """List all served models.
+
+        Args:
+            owner_id: User ID that owns the served models.
 
         Returns:
             List of served model data dicts.
         """
         result = await self.db.execute(
-            select(ServedModel).order_by(ServedModel.started_at.desc())
+            select(ServedModel)
+            .where(ServedModel.owner_id == owner_id)
+            .order_by(ServedModel.started_at.desc())
         )
         models = result.scalars().all()
 
