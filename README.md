@@ -14,7 +14,7 @@ A self-hosted GPU model serving platform. Browse HuggingFace models, click **Ser
 
 ```bash
 # Clone
-git clone https://github.com/your-org/modelserve && cd modelserve
+git clone https://github.com/Krishnapthm/model-serve.git && cd modelserve
 
 # Configure environment
 cp .env.example .env
