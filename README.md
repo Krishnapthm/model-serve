@@ -18,13 +18,16 @@ git clone https://github.com/Krishnapthm/model-serve.git && cd model-serve
 
 # Configure environment
 cp .env.example .env
-# Edit .env — set HF_TOKEN, SECRET_KEY, POSTGRES_PASSWORD
+# Edit .env — set HF_TOKEN, SECRET_KEY, POSTGRES_PASSWORD (and CORS_* as needed)
 
 # Start (NVIDIA GPU)
 docker compose -f docker/compose.cuda.yml up --build
 
 # Start (AMD GPU)
 docker compose -f docker/compose.rocm.yml up --build
+
+# Local development (frontend HMR, no GPU/vLLM)
+docker compose -f docker/compose.local.yml up --build
 ```
 
 ### Access
@@ -33,6 +36,13 @@ docker compose -f docker/compose.rocm.yml up --build
 | ----------- | -------------------------------------------------------- |
 | Frontend    | [http://localhost:3000](http://localhost:3000)           |
 | Backend API | [http://localhost:8000/docs](http://localhost:8000/docs) |
+
+### Deploying on changing public IPs (GPU VPC)
+
+- Frontend API calls auto-resolve to the current browser host on port `8000`, so you do not need to hardcode a fixed public IP.
+- Keep `VITE_API_BASE_URL` empty in `.env` unless you intentionally want a custom backend URL.
+- Default CORS in `.env.example` is `CORS_ORIGINS=*` (with `CORS_ALLOW_CREDENTIALS=false`) to avoid CORS breaks when the public origin changes.
+- For stricter production security, replace `CORS_ORIGINS=*` with a comma-separated allowlist of your exact frontend origins.
 
 ## How It Works
 
@@ -43,7 +53,7 @@ docker compose -f docker/compose.rocm.yml up --build
 
 ## Project Structure
 
-```
+```text
 ├── backend/          # FastAPI (Python, uv)
 ├── frontend/         # Vite + React + shadcn/ui
 ├── docker/           # Dockerfiles + Compose files
@@ -74,13 +84,18 @@ npm run lint         # Lint
 
 ## API
 
-Most endpoints require an API key in the `X-API-Key` header.
+Create an account with `POST /api/v1/auth/signup` (or log in with `POST /api/v1/auth/login`) and use the returned bearer token:
+
+`Authorization: Bearer <access_token>`
+
 Public endpoints: `GET /api/v1/health`, `GET /api/v1/models`, and `GET /api/v1/models/{model_id}`.
-When the system has no active keys yet, the first `POST /api/v1/keys` request is allowed without auth to bootstrap access.
 
 | Method   | Path                  | Description        |
 | -------- | --------------------- | ------------------ |
 | `GET`    | `/api/v1/health`      | Health check       |
+| `POST`   | `/api/v1/auth/signup` | Signup + token     |
+| `POST`   | `/api/v1/auth/login`  | Login + token      |
+| `GET`    | `/api/v1/auth/me`     | Current user       |
 | `GET`    | `/api/v1/models`      | List HF models     |
 | `GET`    | `/api/v1/models/{id}` | Model detail       |
 | `POST`   | `/api/v1/serve`       | Serve a model      |

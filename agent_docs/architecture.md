@@ -3,16 +3,18 @@
 ## What This Project Does
 
 ModelServe lets users on a GPU VM:
-1. Enter a HuggingFace token → browse available models (categorized by type)
-2. Click **Serve** → backend pulls the model and launches a vLLM process
-3. Get an OpenAI-compatible endpoint immediately
-4. Use a single API key (`OPENAI_API_KEY` + `OPENAI_BASE_URL`) in any OpenAI SDK client
+
+1. Create an account / log in (email + password)
+2. Browse available HuggingFace models (categorized by type)
+3. Click **Serve** → backend pulls the model and launches a vLLM process
+4. Get an OpenAI-compatible endpoint immediately
+5. Use a generated API key (`OPENAI_API_KEY` + `OPENAI_BASE_URL`) in any OpenAI SDK client
 
 ---
 
 ## Services
 
-```
+```text
 ┌─────────────────────────────────────────────────────────────┐
 │  Docker Compose (cuda or rocm)                              │
 │                                                             │
@@ -34,7 +36,7 @@ ModelServe lets users on a GPU VM:
 
 ## Directory Structure
 
-```
+```text
 /
 ├── backend/
 │   ├── app/
@@ -89,7 +91,7 @@ ModelServe lets users on a GPU VM:
 
 ## Data Flow: Serving a Model
 
-```
+```text
 User clicks "Serve"
   → POST /api/v1/serve  { model_id, hf_token }
   → vllm_manager.py: docker run vllm/vllm-openai ... --model {model_id}
@@ -103,26 +105,29 @@ User clicks "Serve"
 
 Models are categorized by HuggingFace pipeline tag:
 
-| HF Pipeline Tag | Display Label | Badge Color |
-|---|---|---|
-| `text-generation` | LLM | blue |
-| `feature-extraction` | Text Embedding | purple |
-| `text-to-image` | Image Generation | pink |
-| `text-to-video` | Video Generation | orange |
-| `automatic-speech-recognition` | Speech-to-Text | green |
-| `image-to-text` | Vision-Language | cyan |
-| custom | Custom | gray |
+| HF Pipeline Tag                | Display Label    | Badge Color |
+| ------------------------------ | ---------------- | ----------- |
+| `text-generation`              | LLM              | blue        |
+| `feature-extraction`           | Text Embedding   | purple      |
+| `text-to-image`                | Image Generation | pink        |
+| `text-to-video`                | Video Generation | orange      |
+| `automatic-speech-recognition` | Speech-to-Text   | green       |
+| `image-to-text`                | Vision-Language  | cyan        |
+| custom                         | Custom           | gray        |
 
 ---
 
 ## Environment Variables
 
-| Variable | Service | Description |
-|---|---|---|
-| `HF_TOKEN` | backend | HuggingFace read token |
-| `DATABASE_URL` | backend | `postgresql+asyncpg://...` |
-| `SECRET_KEY` | backend | Used for API key signing |
-| `VLLM_HOST` | backend | vLLM sidecar hostname |
-| `VITE_API_BASE_URL` | frontend | Backend base URL |
-| `OPENAI_API_KEY` | client (user) | Generated API key |
-| `OPENAI_BASE_URL` | client (user) | Served model endpoint |
+| Variable                 | Service       | Description                                      |
+| ------------------------ | ------------- | ------------------------------------------------ |
+| `HF_TOKEN`               | backend       | HuggingFace read token                           |
+| `DATABASE_URL`           | backend       | `postgresql+asyncpg://...`                       |
+| `SECRET_KEY`             | backend       | Used for API key signing                         |
+| `CORS_ORIGINS`           | backend       | CORS allowlist (`*` or CSV list)                 |
+| `CORS_ALLOW_CREDENTIALS` | backend       | CORS credentials flag (must be `false` with `*`) |
+| `CORS_ORIGIN_REGEX`      | backend       | Optional CORS regex matcher                      |
+| `VLLM_HOST`              | backend       | vLLM sidecar hostname                            |
+| `VITE_API_BASE_URL`      | frontend      | Optional backend base URL override               |
+| `OPENAI_API_KEY`         | client (user) | Generated API key                                |
+| `OPENAI_BASE_URL`        | client (user) | Served model endpoint                            |

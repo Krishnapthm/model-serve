@@ -18,6 +18,7 @@ App-specific compositions go in `src/components/app/`.
 ## Component Reuse Rule
 
 Before creating a new component:
+
 1. Check `src/components/ui/` (shadcn primitives)
 2. Check `src/components/app/` (existing app components)
 3. Only create a new file in `src/components/app/` if neither works.
@@ -41,33 +42,7 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 
 ## Toast / Notifications — Sonner
 
-Use `sonner` (shadcn integrated) for all user feedback. Apply backdrop blur to the toaster.
-
-```tsx
-// main.tsx or layout
-import { Toaster } from "@/components/ui/sonner"
-
-<Toaster
-  position="bottom-right"
-  toastOptions={{ classNames: { toast: "backdrop-blur-md bg-background/80" } }}
-/>
-```
-
-Usage with action buttons:
-
-```tsx
-import { toast } from "sonner"
-
-toast.success("Model served", {
-  description: "Copy your env vars below.",
-  action: { label: "Copy", onClick: () => copyEnvVars() },
-})
-
-toast.error("Failed to pull model", {
-  description: error.message,
-  action: { label: "Retry", onClick: () => retryServe() },
-})
-```
+Use `sonner` (shadcn integrated) for all user feedback
 
 ---
 
@@ -118,26 +93,37 @@ export function useModels(category?: string) {
   return useQuery({
     queryKey: ["models", category],
     queryFn: () => api.getModels(category),
-    staleTime: 5 * 60 * 1000,   // 5 min — HF model list doesn't change often
-    gcTime:    30 * 60 * 1000,
-  })
+    staleTime: 5 * 60 * 1000, // 5 min — HF model list doesn't change often
+    gcTime: 30 * 60 * 1000,
+  });
 }
 
 // hooks/useServeModel.ts
 export function useServeModel() {
-  const queryClient = useQueryClient()
+  const queryClient = useQueryClient();
   return useMutation({
     mutationFn: api.serveModel,
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["served-models"] }),
-    onError: (err) => toast.error("Failed to serve model", { description: err.message }),
-  })
+    onSuccess: () =>
+      queryClient.invalidateQueries({ queryKey: ["served-models"] }),
+    onError: (err) =>
+      toast.error("Failed to serve model", { description: err.message }),
+  });
 }
 ```
 
 **Cache rules:**
+
 - HF model list: `staleTime: 5min` — don't hammer the HF API.
 - Served model status: `staleTime: 30s`, poll with `refetchInterval: 10000` while status is `pending`.
 - API keys: `staleTime: 0` — always fresh after mutations.
+
+## Auth Flow
+
+- Auth pages live at `/login` and `/signup`.
+- Use prebuilt shadcn blocks (`login-01`, `signup-01`) as the base UI.
+- Persist the bearer token in localStorage and set `Authorization: Bearer <token>` via the shared API client.
+- Protect app routes with a route guard component (`ProtectedRoute`) that validates `/auth/me` through TanStack Query.
+- Logout must clear local token state and clear TanStack Query cache.
 
 ---
 
@@ -147,14 +133,17 @@ The model search filter must be **client-side** against the cached TanStack Quer
 Never fire a new API request on each keystroke.
 
 ```tsx
-const { data: models } = useModels()
+const { data: models } = useModels();
 
-const filtered = useMemo(() =>
-  models?.filter(m =>
-    m.id.toLowerCase().includes(query.toLowerCase()) ||
-    m.description?.toLowerCase().includes(query.toLowerCase())
-  ), [models, query]
-)
+const filtered = useMemo(
+  () =>
+    models?.filter(
+      (m) =>
+        m.id.toLowerCase().includes(query.toLowerCase()) ||
+        m.description?.toLowerCase().includes(query.toLowerCase()),
+    ),
+  [models, query],
+);
 ```
 
 Use a debounced input (250ms) to avoid unnecessary re-renders.
@@ -163,12 +152,12 @@ Use a debounced input (250ms) to avoid unnecessary re-renders.
 
 ## State Management Summary
 
-| State type | Where it lives |
-|---|---|
-| Server data (models, keys, served) | TanStack Query |
-| UI state (modals, selected model) | `useState` / `useReducer` |
-| Global UI (theme, HF token) | React Context or Zustand |
-| URL state (category filter, search) | URL search params |
+| State type                          | Where it lives            |
+| ----------------------------------- | ------------------------- |
+| Server data (models, keys, served)  | TanStack Query            |
+| UI state (modals, selected model)   | `useState` / `useReducer` |
+| Global UI (theme, HF token)         | React Context or Zustand  |
+| URL state (category filter, search) | URL search params         |
 
 ---
 

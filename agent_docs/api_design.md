@@ -12,21 +12,21 @@ OpenAPI docs available at `http://localhost:8000/docs`.
 
 ## Authentication
 
-Most endpoints require an API key in the `X-API-Key` header.
+Management endpoints require a bearer token in the `Authorization` header.
 
 Public endpoints:
 
 - `GET /health`
 - `GET /models`
 - `GET /models/{model_id}`
-
-Bootstrap behavior: `POST /keys` is allowed without `X-API-Key` only when there are zero active keys. Once a key exists, `POST /keys` also requires auth.
+- `POST /auth/signup`
+- `POST /auth/login`
 
 ```http
-X-API-Key: sk-ms_AbCdEfGh...
+Authorization: Bearer <access_token>
 ```
 
-The full key is shown **once** on creation. Only the prefix and bcrypt hash are stored.
+API keys created through `POST /keys` are for served-model client usage (`OPENAI_API_KEY`) and are always stored hashed.
 
 ---
 
@@ -38,6 +38,14 @@ The full key is shown **once** on creation. Only the prefix and bcrypt hash are 
 | ------ | -------------------- | ------------------------------------------------------------- |
 | `GET`  | `/models`            | List HF models, supports `?category=` filter and `?q=` search |
 | `GET`  | `/models/{model_id}` | Model detail + link to HF model card                          |
+
+### Auth
+
+| Method | Path           | Description                                |
+| ------ | -------------- | ------------------------------------------ |
+| `POST` | `/auth/signup` | Create user and return bearer access token |
+| `POST` | `/auth/login`  | Login and return bearer access token       |
+| `GET`  | `/auth/me`     | Get current authenticated user             |
 
 ### Serve
 
@@ -54,6 +62,8 @@ The full key is shown **once** on creation. Only the prefix and bcrypt hash are 
 | `POST`   | `/keys`      | Create a new API key                   |
 | `GET`    | `/keys`      | List all keys (prefix + metadata only) |
 | `DELETE` | `/keys/{id}` | Revoke a key                           |
+
+All `Serve` and `API Keys` routes require bearer auth.
 
 ### Health
 

@@ -2,10 +2,16 @@
 
 ## Two Compose Files
 
-| File | GPU Target | Runtime |
-|---|---|---|
-| `docker/compose.cuda.yml` | NVIDIA (CUDA) | `nvidia` container runtime |
-| `docker/compose.rocm.yml` | AMD (ROCm) | `/dev/kfd` + `/dev/dri` devices |
+| File                      | GPU Target    | Runtime                         |
+| ------------------------- | ------------- | ------------------------------- |
+| `docker/compose.cuda.yml` | NVIDIA (CUDA) | `nvidia` container runtime      |
+| `docker/compose.rocm.yml` | AMD (ROCm)    | `/dev/kfd` + `/dev/dri` devices |
+
+For local non-GPU development, use:
+
+| File                       | Purpose                                          |
+| -------------------------- | ------------------------------------------------ |
+| `docker/compose.local.yml` | DB + backend + frontend Vite dev server with HMR |
 
 Both files share the same service topology — only the vLLM image tag and GPU device config differ.
 All shared config is in `docker/compose.base.yml` and extended via `extends`.
@@ -27,6 +33,9 @@ docker compose -f docker/compose.cuda.yml up --build
 
 # AMD
 docker compose -f docker/compose.rocm.yml up --build
+
+# Local development with frontend HMR (no vLLM/GPU)
+docker compose -f docker/compose.local.yml up --build
 ```
 
 ---
@@ -65,8 +74,8 @@ services:
       context: ../frontend
       dockerfile: ../docker/frontend.Dockerfile
     ports: ["3000:3000"]
-    environment:
-      VITE_API_BASE_URL: http://backend:8000
+    # Browser client auto-targets: <current-host>:8000/api/v1
+    # Optional override via VITE_API_BASE_URL
 
   vllm:
     image: vllm/vllm-openai:latest
@@ -95,7 +104,7 @@ volumes:
 ```yaml
 services:
   vllm:
-    image: vllm/vllm-openai:rocm   # ROCm-specific image
+    image: vllm/vllm-openai:rocm # ROCm-specific image
     # No runtime: nvidia
     devices:
       - /dev/kfd
@@ -103,7 +112,7 @@ services:
     group_add:
       - video
     environment:
-      ROCR_VISIBLE_DEVICES: "0"    # Adjust per your AMD GPU count
+      ROCR_VISIBLE_DEVICES: "0" # Adjust per your AMD GPU count
 ```
 
 ---
@@ -142,9 +151,17 @@ DATABASE_URL=postgresql+asyncpg://modelserve:changeme@db:5432/modelserve
 # Security
 SECRET_KEY=your-random-secret-key-min-32-chars
 
+# CORS (dynamic VPC/public IP friendly defaults)
+CORS_ORIGINS=*
+CORS_ALLOW_CREDENTIALS=false
+CORS_ORIGIN_REGEX=
+
 # vLLM
 VLLM_HOST=vllm
 VLLM_PORT=8080
+
+# Frontend (optional override; leave empty for dynamic same-host behavior)
+VITE_API_BASE_URL=
 ```
 
 ---
@@ -155,10 +172,12 @@ If you have a custom vLLM image (e.g. with custom kernels or quantization suppor
 
 1. Build your image: `docker build -t my-vllm:latest ./custom-vllm`
 2. In your compose file, replace the `image:` field:
+
    ```yaml
    vllm:
      image: my-vllm:latest
    ```
+
 3. All other config (devices, volumes, env) stays the same.
 4. Document any extra env vars your image requires in `.env.example`.
 
@@ -168,9 +187,9 @@ The backend's `vllm_manager.py` service spawns vLLM via the Docker socket using 
 
 ## Ports
 
-| Service | Port | Description |
-|---|---|---|
-| Frontend | 3000 | React app |
-| Backend | 8000 | FastAPI (OpenAPI at `/docs`) |
-| vLLM | 8080 | OpenAI-compatible endpoint |
-| PostgreSQL | 5432 | Internal only (not exposed) |
+| Service    | Port | Description                  |
+| ---------- | ---- | ---------------------------- |
+| Frontend   | 3000 | React app                    |
+| Backend    | 8000 | FastAPI (OpenAPI at `/docs`) |
+| vLLM       | 8080 | OpenAI-compatible endpoint   |
+| PostgreSQL | 5432 | Internal only (not exposed)  |

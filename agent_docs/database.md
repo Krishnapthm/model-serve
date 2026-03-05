@@ -10,32 +10,45 @@
 
 ## Schema Overview
 
+### `users`
+
+| Column          | Type        | Notes                 |
+| --------------- | ----------- | --------------------- |
+| `id`            | UUID        | PK                    |
+| `email`         | TEXT        | Unique login identity |
+| `full_name`     | TEXT        | Nullable display name |
+| `password_hash` | TEXT        | bcrypt hash           |
+| `created_at`    | TIMESTAMPTZ |                       |
+| `is_active`     | BOOLEAN     | Soft disable support  |
+
 ### `api_keys`
 
-| Column | Type | Notes |
-|---|---|---|
-| `id` | UUID | PK |
-| `name` | TEXT | User-provided label |
-| `key_hash` | TEXT | bcrypt hash — never store plaintext |
-| `key_prefix` | TEXT | First 8 chars for display (e.g. `sk-ms_Ab1`) |
-| `created_at` | TIMESTAMPTZ | |
-| `last_used_at` | TIMESTAMPTZ | Nullable |
-| `is_active` | BOOLEAN | Soft delete |
+| Column         | Type        | Notes                                        |
+| -------------- | ----------- | -------------------------------------------- |
+| `id`           | UUID        | PK                                           |
+| `owner_id`     | UUID        | FK → `users.id`                              |
+| `name`         | TEXT        | User-provided label                          |
+| `key_hash`     | TEXT        | bcrypt hash — never store plaintext          |
+| `key_prefix`   | TEXT        | First 8 chars for display (e.g. `sk-ms_Ab1`) |
+| `created_at`   | TIMESTAMPTZ |                                              |
+| `last_used_at` | TIMESTAMPTZ | Nullable                                     |
+| `is_active`    | BOOLEAN     | Soft delete                                  |
 
 ### `served_models`
 
-| Column | Type | Notes |
-|---|---|---|
-| `id` | UUID | PK |
-| `model_id` | TEXT | HF model ID |
-| `display_name` | TEXT | |
-| `pipeline_tag` | TEXT | e.g. `text-generation` |
-| `endpoint_url` | TEXT | Internal vLLM endpoint |
-| `status` | ENUM | `pending`, `running`, `stopped`, `error` |
-| `gpu_type` | ENUM | `cuda`, `rocm` |
-| `container_id` | TEXT | Docker container ID |
-| `started_at` | TIMESTAMPTZ | |
-| `stopped_at` | TIMESTAMPTZ | Nullable |
+| Column         | Type        | Notes                                    |
+| -------------- | ----------- | ---------------------------------------- |
+| `id`           | UUID        | PK                                       |
+| `owner_id`     | UUID        | FK → `users.id`                          |
+| `model_id`     | TEXT        | HF model ID                              |
+| `display_name` | TEXT        |                                          |
+| `pipeline_tag` | TEXT        | e.g. `text-generation`                   |
+| `endpoint_url` | TEXT        | Internal vLLM endpoint                   |
+| `status`       | ENUM        | `pending`, `running`, `stopped`, `error` |
+| `gpu_type`     | ENUM        | `cuda`, `rocm`                           |
+| `container_id` | TEXT        | Docker container ID                      |
+| `started_at`   | TIMESTAMPTZ |                                          |
+| `stopped_at`   | TIMESTAMPTZ | Nullable                                 |
 
 ---
 

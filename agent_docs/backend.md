@@ -20,7 +20,7 @@ Never use `pip install` or `poetry`. The lockfile is `uv.lock` — commit it.
 
 ## Dependency Injection Pattern
 
-All shared resources (DB session, services, current API key) live in `app/api/deps.py`.
+All shared resources (DB session, services, current user/API key) live in `app/api/deps.py`.
 Routers import only from `deps.py` — never directly from services or DB.
 
 ```python
@@ -37,17 +37,26 @@ async def get_current_key(
     db: AsyncSession = Depends(get_db),
 ) -> APIKey:
     ...
+
+async def get_current_user(
+    credentials: HTTPAuthorizationCredentials = Security(bearer_header),
+    db: AsyncSession = Depends(get_db),
+    settings: Settings = Depends(get_settings),
+) -> User:
+    ...
 ```
 
 ```python
 # app/api/v1/models.py  ✅ correct
-@router.get("/models")
+@router.get("/serve")
 async def list_models(
-    hf_svc: HuggingFaceService = Depends(get_hf_service),
-    _key: APIKey = Depends(get_current_key),
-) -> list[ModelSchema]:
-    return await hf_svc.list_models()
+    vllm: VLLMManager = Depends(get_vllm_manager),
+    current_user: User = Depends(get_current_user),
+) -> list[dict]:
+    return await vllm.list_served(owner_id=current_user.id)
 ```
+
+For dashboard auth, use JWT bearer tokens (`Authorization: Bearer ...`) and resolve identity via `get_current_user`. Do not decode tokens directly in routers.
 
 ---
 
