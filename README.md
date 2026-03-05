@@ -113,11 +113,11 @@ FastAPI · PostgreSQL · React · Vite · shadcn/ui · TanStack Query · vLLM ·
 
 ## Documentation
 
-| Doc | Description |
-| --- | --- |
-| [Architecture](docs/architecture.md) | System overview, service diagram, data flow |
-| [Deployment](docs/deployment.md) | Docker Compose, env vars, GPU VPC setup |
-| [API Reference](docs/api.md) | Endpoints, auth, response shapes |
-| [Backend](backend/README.md) | FastAPI setup, DB schema, migrations, testing |
-| [Frontend](frontend/README.md) | React setup, component library, auth flow |
-| [Docker](docker/README.md) | Compose variants, Dockerfiles, ports |
+| Doc                                  | Description                                   |
+| ------------------------------------ | --------------------------------------------- |
+| [Architecture](docs/architecture.md) | System overview, service diagram, data flow   |
+| [Deployment](docs/deployment.md)     | Docker Compose, env vars, GPU VPC setup       |
+| [API Reference](docs/api.md)         | Endpoints, auth, response shapes              |
+| [Backend](backend/README.md)         | FastAPI setup, DB schema, migrations, testing |
+| [Frontend](frontend/README.md)       | React setup, component library, auth flow     |
+| [Docker](docker/README.md)           | Compose variants, Dockerfiles, ports          |

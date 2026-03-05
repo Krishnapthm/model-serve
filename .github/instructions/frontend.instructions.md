@@ -1,7 +1,7 @@
 ---
-name: 'Frontend Conventions'
-description: 'React rules: shadcn/ui only, TanStack Query, ScrollArea, backdrop blur, state management, TypeScript strict'
-applyTo: 'frontend/**'
+name: "Frontend Conventions"
+description: "React rules: shadcn/ui only, TanStack Query, ScrollArea, backdrop blur, state management, TypeScript strict"
+applyTo: "frontend/**"
 ---
 
 # Frontend Coding Conventions
@@ -20,6 +20,7 @@ npx shadcn@latest add dialog
 ### Component Reuse Order
 
 Before creating a new component:
+
 1. Check `src/components/ui/` (shadcn primitives)
 2. Check `src/components/app/` (existing app components)
 3. Only create a new file in `src/components/app/` if neither works.
@@ -43,6 +44,7 @@ Use `sonner` (shadcn integrated) for all user feedback notifications.
 ## Backdrop Blur on Floating Elements
 
 Apply `backdrop-blur-md bg-background/80` to **all** floating elements:
+
 - `Dialog` / `AlertDialog` overlays
 - Sticky / floating headers
 - Sonner toasts
@@ -57,14 +59,20 @@ Apply `backdrop-blur-md bg-background/80` to **all** floating elements:
 Use the shadcn `Badge` component with the correct mapping:
 
 ```tsx
-const MODEL_TYPE_BADGE: Record<string, { label: string; variant: BadgeVariant }> = {
-  "text-generation":              { label: "LLM",              variant: "default" },
-  "feature-extraction":           { label: "Text Embedding",   variant: "secondary" },
-  "text-to-image":                { label: "Image Generation", variant: "outline" },
-  "text-to-video":                { label: "Video Generation", variant: "destructive" },
-  "automatic-speech-recognition": { label: "Speech-to-Text",   variant: "secondary" },
-  "image-to-text":                { label: "Vision-Language",  variant: "outline" },
-}
+const MODEL_TYPE_BADGE: Record<
+  string,
+  { label: string; variant: BadgeVariant }
+> = {
+  "text-generation": { label: "LLM", variant: "default" },
+  "feature-extraction": { label: "Text Embedding", variant: "secondary" },
+  "text-to-image": { label: "Image Generation", variant: "outline" },
+  "text-to-video": { label: "Video Generation", variant: "destructive" },
+  "automatic-speech-recognition": {
+    label: "Speech-to-Text",
+    variant: "secondary",
+  },
+  "image-to-text": { label: "Vision-Language", variant: "outline" },
+};
 ```
 
 ## Data Fetching — TanStack Query
@@ -84,11 +92,11 @@ export function useModels(category?: string) {
 
 ### Cache Rules
 
-| Data              | staleTime | Notes                                              |
-| ----------------- | --------- | -------------------------------------------------- |
-| HF model list     | 5 min     | Don't hammer the HF API                            |
-| Served model status | 30 sec  | Poll with `refetchInterval: 10000` while `pending` |
-| API keys          | 0         | Always fresh after mutations                       |
+| Data                | staleTime | Notes                                              |
+| ------------------- | --------- | -------------------------------------------------- |
+| HF model list       | 5 min     | Don't hammer the HF API                            |
+| Served model status | 30 sec    | Poll with `refetchInterval: 10000` while `pending` |
+| API keys            | 0         | Always fresh after mutations                       |
 
 ### Mutations
 
@@ -97,8 +105,10 @@ export function useServeModel() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: api.serveModel,
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["served-models"] }),
-    onError: (err) => toast.error("Failed to serve model", { description: err.message }),
+    onSuccess: () =>
+      queryClient.invalidateQueries({ queryKey: ["served-models"] }),
+    onError: (err) =>
+      toast.error("Failed to serve model", { description: err.message }),
   });
 }
 ```
@@ -117,10 +127,12 @@ Model search must filter **client-side** against cached TanStack Query data. Nev
 
 ```tsx
 const filtered = useMemo(
-  () => models?.filter(m =>
-    m.id.toLowerCase().includes(query.toLowerCase()) ||
-    m.description?.toLowerCase().includes(query.toLowerCase())
-  ),
+  () =>
+    models?.filter(
+      (m) =>
+        m.id.toLowerCase().includes(query.toLowerCase()) ||
+        m.description?.toLowerCase().includes(query.toLowerCase()),
+    ),
   [models, query],
 );
 ```

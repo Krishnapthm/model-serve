@@ -1,7 +1,7 @@
 ---
-name: 'Commit Messages'
-description: 'Conventional Commits format: type(scope): description — lowercase, imperative, ≤ 72 chars'
-applyTo: '**'
+name: "Commit Messages"
+description: "Conventional Commits format: type(scope): description — lowercase, imperative, ≤ 72 chars"
+applyTo: "**"
 ---
 
 # Commit Message Guidelines

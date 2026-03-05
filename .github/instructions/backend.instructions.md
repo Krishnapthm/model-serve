@@ -1,7 +1,7 @@
 ---
-name: 'Backend Conventions'
-description: 'FastAPI patterns: dependency injection, service layer, schemas, error handling, testing, and database session usage'
-applyTo: 'backend/**'
+name: "Backend Conventions"
+description: "FastAPI patterns: dependency injection, service layer, schemas, error handling, testing, and database session usage"
+applyTo: "backend/**"
 ---
 
 # Backend Coding Conventions

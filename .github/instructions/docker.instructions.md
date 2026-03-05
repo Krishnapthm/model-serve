@@ -1,7 +1,7 @@
 ---
-name: 'Docker Conventions'
-description: 'Compose structure, base+extends pattern, GPU runtime config, Dockerfile entrypoint conventions'
-applyTo: 'docker/**'
+name: "Docker Conventions"
+description: "Compose structure, base+extends pattern, GPU runtime config, Dockerfile entrypoint conventions"
+applyTo: "docker/**"
 ---
 
 # Docker Conventions
@@ -25,6 +25,7 @@ Never remove the `alembic upgrade head` step. This ensures zero manual migration
 ## GPU Runtime Conventions
 
 ### NVIDIA (CUDA)
+
 ```yaml
 deploy:
   resources:
@@ -36,6 +37,7 @@ deploy:
 ```
 
 ### AMD (ROCm)
+
 ```yaml
 devices:
   - /dev/kfd

@@ -1,7 +1,7 @@
 ---
-name: 'Documentation Standards'
-description: 'Rules for writing and maintaining project documentation — README.md placement, docs/ folder structure, and content guidelines'
-applyTo: '**/*.md'
+name: "Documentation Standards"
+description: "Rules for writing and maintaining project documentation — README.md placement, docs/ folder structure, and content guidelines"
+applyTo: "**/*.md"
 ---
 
 # Documentation Standards
@@ -10,13 +10,13 @@ applyTo: '**/*.md'
 
 This project separates **documentation** (for humans) from **agent instructions** (for AI coding agents):
 
-| Content                          | Location                                | Format              |
-| -------------------------------- | --------------------------------------- | ------------------- |
-| Directory-specific docs          | `<dir>/README.md`                       | Markdown            |
-| Cross-cutting docs               | `docs/<topic>.md`                       | Markdown            |
-| Always-on agent rules            | `.github/copilot-instructions.md`       | Markdown            |
-| File-scoped agent rules          | `.github/instructions/*.instructions.md`| Markdown + YAML front matter |
-| Claude-compatible agent rules    | `.claude/CLAUDE.md`                     | Markdown            |
+| Content                       | Location                                 | Format                       |
+| ----------------------------- | ---------------------------------------- | ---------------------------- |
+| Directory-specific docs       | `<dir>/README.md`                        | Markdown                     |
+| Cross-cutting docs            | `docs/<topic>.md`                        | Markdown                     |
+| Always-on agent rules         | `.github/copilot-instructions.md`        | Markdown                     |
+| File-scoped agent rules       | `.github/instructions/*.instructions.md` | Markdown + YAML front matter |
+| Claude-compatible agent rules | `.claude/CLAUDE.md`                      | Markdown                     |
 
 ### Where to Put Documentation
 
@@ -87,7 +87,7 @@ After making code changes:
 ## Things to Avoid
 
 - Stale docs are worse than no docs. Delete documentation for removed features.
-- Don't document implementation details that change frequently — document the *why* and the *interface*.
+- Don't document implementation details that change frequently — document the _why_ and the _interface_.
 - Don't use screenshots for CLI output — use code blocks so they're searchable and updatable.
 - Don't add "Last updated" dates — use git history for that.
 - Don't create `docs/README.md` as a table of contents — the file listing in `docs/` is the TOC.

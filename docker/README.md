@@ -6,12 +6,12 @@ Docker Compose setup for ModelServe. Provides GPU-accelerated (CUDA/ROCm) and lo
 
 ## Compose Files
 
-| File               | Purpose                                         |
-| ------------------ | ----------------------------------------------- |
-| `compose.base.yml` | Shared service config — extended by other files |
-| `compose.cuda.yml` | NVIDIA GPU stack (`nvidia` runtime)             |
-| `compose.rocm.yml` | AMD GPU stack (`/dev/kfd` + `/dev/dri`)         |
-| `compose.local.yml`| Local dev — DB + backend + frontend HMR, no GPU |
+| File                | Purpose                                         |
+| ------------------- | ----------------------------------------------- |
+| `compose.base.yml`  | Shared service config — extended by other files |
+| `compose.cuda.yml`  | NVIDIA GPU stack (`nvidia` runtime)             |
+| `compose.rocm.yml`  | AMD GPU stack (`/dev/kfd` + `/dev/dri`)         |
+| `compose.local.yml` | Local dev — DB + backend + frontend HMR, no GPU |
 
 ---
 
@@ -36,10 +36,10 @@ docker compose -f docker/compose.local.yml up --build
 
 ```yaml
 services:
-  db:          # PostgreSQL 16 — healthcheck enabled
-  backend:     # FastAPI — depends on db, runs migrations on start
-  frontend:    # Vite/React — serves on :3000
-  vllm:        # vLLM OpenAI-compatible server (GPU stacks only)
+  db: # PostgreSQL 16 — healthcheck enabled
+  backend: # FastAPI — depends on db, runs migrations on start
+  frontend: # Vite/React — serves on :3000
+  vllm: # vLLM OpenAI-compatible server (GPU stacks only)
 ```
 
 ### CUDA-specific Config
@@ -110,7 +110,7 @@ Builds the Vite app and serves it on port 3000.
 
 ## Volumes
 
-| Volume     | Purpose                    |
-| ---------- | -------------------------- |
+| Volume     | Purpose                     |
+| ---------- | --------------------------- |
 | `pgdata`   | PostgreSQL data persistence |
-| `hf_cache` | HuggingFace model cache    |
+| `hf_cache` | HuggingFace model cache     |
