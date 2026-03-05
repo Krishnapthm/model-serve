@@ -1,1 +1,21 @@
 .env
+
+# Local assistant metadata
+.claude/
+
+# Python virtual environments
+.venv/
+venv/
+backend/.venv/
+frontend/.venv/
+
+# Python cache/bytecode
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.py[cod]
+
+# Python tool caches
+.pytest_cache/
+.mypy_cache/
