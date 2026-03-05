@@ -1,0 +1,19 @@
+# AMD ROCm GPU stack
+# Usage: docker compose -f docker/compose.rocm.yml up --build
+
+include:
+  - compose.base.yml
+
+services:
+  vllm:
+    image: vllm/vllm-openai:rocm
+    devices:
+      - /dev/kfd
+      - /dev/dri
+    group_add:
+      - video
+    env_file: ../.env
+    environment:
+      ROCR_VISIBLE_DEVICES: "0"
+    volumes:
+      - hf_cache:/root/.cache/huggingface

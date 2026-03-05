@@ -1,0 +1,29 @@
+# NVIDIA CUDA GPU stack
+# Usage: docker compose -f docker/compose.cuda.yml up --build
+
+include:
+  - compose.base.yml
+
+services:
+  backend:
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+
+  vllm:
+    image: vllm/vllm-openai:latest
+    runtime: nvidia
+    env_file: ../.env
+    volumes:
+      - hf_cache:/root/.cache/huggingface
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
