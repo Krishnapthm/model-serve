@@ -1,54 +1,30 @@
-# copilot-instructions.md
+# ModelServe — Global Instructions
 
-## Project: ModelServe
-
-A self-hosted GPU model serving platform. Users browse HuggingFace models, click **Serve**, and get an OpenAI-compatible endpoint — no infra knowledge required.
-
+A self-hosted GPU model serving platform.
 **Stack:** FastAPI · PostgreSQL · React (Vite) · shadcn/ui · vLLM · Docker Compose (CUDA + ROCm)
 
----
+## Project Layout
 
-## Before You Start
+```
+/
+├── backend/          # FastAPI app (uv) — see backend/README.md
+├── frontend/         # Vite + React + shadcn/ui — see frontend/README.md
+├── docker/           # Compose files, Dockerfiles — see docker/README.md
+├── docs/             # Cross-cutting docs (architecture, deployment, API)
+└── README.md         # User-facing quickstart
+```
 
-Read the relevant `agent_docs/` file(s) before making any changes:
+## Core Rules
 
-| File                         | When to read                                     |
-| ---------------------------- | ------------------------------------------------ |
-| `agent_docs/architecture.md` | Project structure, service boundaries, data flow |
-| `agent_docs/backend.md`      | FastAPI conventions, DI patterns, uv, docstrings |
-| `agent_docs/frontend.md`     | React rules, shadcn/ui, TanStack Query, state    |
-| `agent_docs/docker.md`       | Compose setup, CUDA vs ROCm, env vars            |
-| `agent_docs/database.md`     | Schema, migrations, initialization on compose up |
-| `agent_docs/api_design.md`   | Endpoint conventions, API key auth, error shapes |
-
----
-
-## Core Rules (Always Apply)
-
-- **Docs first.** After every change, update the relevant `agent_docs/` file and the root `README.md`. No exceptions.
 - **DRY + SOLID.** No logic duplication. One responsibility per module/component.
 - **Dependency injection everywhere** in FastAPI. Never import services directly into routers.
 - **uv only** for Python dependency management. Never pip, never poetry.
 - **shadcn/ui only** for all UI components. Never install raw Radix, Headless UI, or MUI.
 - **No native scrollbars.** Use shadcn `ScrollArea` everywhere.
 - **TanStack Query** for all server state. Never call APIs directly in components or `useEffect`.
+- **Keep documentation current.** After changes, update the relevant directory README.md and `docs/` files when the change affects cross-cutting concerns.
 
----
-
-## Quick Orientation
-
-```
-/
-├── backend/          # FastAPI app (uv)
-├── frontend/         # Vite + React + shadcn/ui
-├── docker/           # Compose files, Dockerfiles
-├── agent_docs/       # Agent reference docs (read before working)
-└── README.md         # User-facing quickstart
-```
-
----
-
-## How to Verify Your Work
+## Verification
 
 ```bash
 # Backend

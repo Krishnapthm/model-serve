@@ -54,10 +54,10 @@ docker compose -f docker/compose.local.yml up --build
 ## Project Structure
 
 ```text
-├── backend/          # FastAPI (Python, uv)
-├── frontend/         # Vite + React + shadcn/ui
-├── docker/           # Dockerfiles + Compose files
-├── agent_docs/       # Agent reference docs
+├── backend/          # FastAPI (Python, uv) — see backend/README.md
+├── frontend/         # Vite + React + shadcn/ui — see frontend/README.md
+├── docker/           # Dockerfiles + Compose files — see docker/README.md
+├── docs/             # Cross-cutting docs (architecture, deployment, API)
 └── .env.example      # Environment template
 ```
 
@@ -110,3 +110,14 @@ Full API docs at `http://localhost:8000/docs` when running.
 ## Stack
 
 FastAPI · PostgreSQL · React · Vite · shadcn/ui · TanStack Query · vLLM · Docker Compose
+
+## Documentation
+
+| Doc | Description |
+| --- | --- |
+| [Architecture](docs/architecture.md) | System overview, service diagram, data flow |
+| [Deployment](docs/deployment.md) | Docker Compose, env vars, GPU VPC setup |
+| [API Reference](docs/api.md) | Endpoints, auth, response shapes |
+| [Backend](backend/README.md) | FastAPI setup, DB schema, migrations, testing |
+| [Frontend](frontend/README.md) | React setup, component library, auth flow |
+| [Docker](docker/README.md) | Compose variants, Dockerfiles, ports |

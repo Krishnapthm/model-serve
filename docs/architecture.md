@@ -1,6 +1,6 @@
 # Architecture
 
-## What This Project Does
+## What ModelServe Does
 
 ModelServe lets users on a GPU VM:
 
@@ -80,11 +80,25 @@ ModelServe lets users on a GPU VM:
 ├── docker/
 │   ├── compose.cuda.yml          # NVIDIA GPU stack
 │   ├── compose.rocm.yml          # AMD GPU stack
+│   ├── compose.local.yml         # Local dev (no GPU)
+│   ├── compose.base.yml          # Shared service config
 │   ├── backend.Dockerfile
 │   └── frontend.Dockerfile
 │
-├── agent_docs/                   # This folder
-└── README.md
+├── docs/                         # Cross-cutting documentation
+│   ├── architecture.md           # This file
+│   ├── deployment.md             # Docker, compose, env vars
+│   └── api.md                    # API endpoints, auth, response shapes
+│
+├── .github/
+│   ├── copilot-instructions.md   # Always-on agent instructions
+│   └── instructions/             # File-scoped agent instructions
+│       ├── backend.instructions.md
+│       ├── frontend.instructions.md
+│       ├── docker.instructions.md
+│       └── documentation.instructions.md
+│
+└── README.md                     # User-facing quickstart
 ```
 
 ---
@@ -114,20 +128,3 @@ Models are categorized by HuggingFace pipeline tag:
 | `automatic-speech-recognition` | Speech-to-Text   | green       |
 | `image-to-text`                | Vision-Language  | cyan        |
 | custom                         | Custom           | gray        |
-
----
-
-## Environment Variables
-
-| Variable                 | Service       | Description                                      |
-| ------------------------ | ------------- | ------------------------------------------------ |
-| `HF_TOKEN`               | backend       | HuggingFace read token                           |
-| `DATABASE_URL`           | backend       | `postgresql+asyncpg://...`                       |
-| `SECRET_KEY`             | backend       | Used for API key signing                         |
-| `CORS_ORIGINS`           | backend       | CORS allowlist (`*` or CSV list)                 |
-| `CORS_ALLOW_CREDENTIALS` | backend       | CORS credentials flag (must be `false` with `*`) |
-| `CORS_ORIGIN_REGEX`      | backend       | Optional CORS regex matcher                      |
-| `VLLM_HOST`              | backend       | vLLM sidecar hostname                            |
-| `VITE_API_BASE_URL`      | frontend      | Optional backend base URL override               |
-| `OPENAI_API_KEY`         | client (user) | Generated API key                                |
-| `OPENAI_BASE_URL`        | client (user) | Served model endpoint                            |
