@@ -90,9 +90,7 @@ export async function getConfiguredModels(): Promise<ServedModel[]> {
 
 /** Get a single model slot (public). */
 export async function getConfiguredModel(slot: number): Promise<ServedModel> {
-  const { data } = await api.get<DataResponse<ServedModel>>(
-    `/models/${slot}`,
-  );
+  const { data } = await api.get<DataResponse<ServedModel>>(`/models/${slot}`);
   return data.data;
 }
 

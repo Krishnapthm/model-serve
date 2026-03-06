@@ -96,11 +96,11 @@ export function useConfiguredModels() {
 
 ## State Management
 
-| State type                          | Where it lives            |
-| ----------------------------------- | ------------------------- |
-| Server data (models, keys, served)  | TanStack Query            |
-| UI state (modals, selected model)   | `useState` / `useReducer` |
-| Global UI (theme)                   | React Context or Zustand  |
+| State type                         | Where it lives            |
+| ---------------------------------- | ------------------------- |
+| Server data (models, keys, served) | TanStack Query            |
+| UI state (modals, selected model)  | `useState` / `useReducer` |
+| Global UI (theme)                  | React Context or Zustand  |
 
 ## TypeScript
 
