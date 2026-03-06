@@ -6,7 +6,7 @@ include:
 
 services:
   vllm:
-    image: rocm/vllm:v0.14.0_amd_dev
+    image: vllm/vllm-openai-rocm:v0.16.0-base
     devices:
       - /dev/kfd
       - /dev/dri
