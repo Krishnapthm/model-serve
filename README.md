@@ -1,4 +1,4 @@
-# ModelServe
+# Model Serve
 
 A self-hosted model serving platform for AMD ROCm GPUs. Declare the models you want to serve, run `docker compose up`, and get OpenAI-compatible endpoints — no infra knowledge required.
 
@@ -8,7 +8,7 @@ A self-hosted model serving platform for AMD ROCm GPUs. Declare the models you w
 
 - Docker & Docker Compose
 - AMD GPU with ROCm drivers
-- [HuggingFace token](https://huggingface.co/settings/tokens) (for gated models)
+- [HuggingFace token](https://huggingface.co/settings/tokens)
 
 ### Setup
 
