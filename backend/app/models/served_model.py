@@ -46,9 +46,13 @@ class ServedModel(Base):
     pipeline_tag: Mapped[str] = mapped_column(Text, nullable=True)
     endpoint_url: Mapped[str] = mapped_column(Text, nullable=True)
     status: Mapped[ModelStatus] = mapped_column(
-        Enum(ModelStatus), default=ModelStatus.PENDING
+        Enum(ModelStatus, values_callable=lambda x: [e.value for e in x]),
+        default=ModelStatus.PENDING,
     )
-    gpu_type: Mapped[GPUType] = mapped_column(Enum(GPUType), nullable=False)
+    gpu_type: Mapped[GPUType] = mapped_column(
+        Enum(GPUType, values_callable=lambda x: [e.value for e in x]),
+        nullable=False,
+    )
     container_id: Mapped[str | None] = mapped_column(Text, nullable=True)
     started_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=datetime.utcnow

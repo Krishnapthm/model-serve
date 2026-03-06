@@ -10,7 +10,9 @@ class ServeCreate(BaseModel):
     """Request body for POST /serve."""
 
     model_id: str
-    gpu_type: str = "cuda"
+    # gpu_type is optional and ignored by this deployment — the server always
+    # uses the VLLM_GPU_TYPE configured at deploy time (rocm).
+    gpu_type: str | None = None
 
 
 class ServedModelRead(BaseModel):

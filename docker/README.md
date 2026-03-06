@@ -1,6 +1,6 @@
 # Docker
 
-Docker Compose setup for ModelServe. Provides GPU-accelerated (CUDA/ROCm) and local development configurations.
+Docker Compose setup for ModelServe. Provides AMD ROCm GPU-accelerated and local development configurations.
 
 ---
 
@@ -9,7 +9,6 @@ Docker Compose setup for ModelServe. Provides GPU-accelerated (CUDA/ROCm) and lo
 | File                | Purpose                                         |
 | ------------------- | ----------------------------------------------- |
 | `compose.base.yml`  | Shared service config — extended by other files |
-| `compose.cuda.yml`  | NVIDIA GPU stack (`nvidia` runtime)             |
 | `compose.rocm.yml`  | AMD GPU stack (`/dev/kfd` + `/dev/dri`)         |
 | `compose.local.yml` | Local dev — DB + backend + frontend HMR, no GPU |
 
@@ -20,10 +19,7 @@ Docker Compose setup for ModelServe. Provides GPU-accelerated (CUDA/ROCm) and lo
 ```bash
 # From repo root:
 
-# NVIDIA
-docker compose -f docker/compose.cuda.yml up --build
-
-# AMD
+# AMD ROCm
 docker compose -f docker/compose.rocm.yml up --build
 
 # Local development (no GPU)
@@ -36,42 +32,39 @@ docker compose -f docker/compose.local.yml up --build
 
 ```yaml
 services:
-  db: # PostgreSQL 16 — healthcheck enabled
+  db: # PostgreSQL 17 — healthcheck enabled
   backend: # FastAPI — depends on db, runs migrations on start
   frontend: # Vite/React — serves on :3000
-  vllm: # vLLM OpenAI-compatible server (GPU stacks only)
-```
-
-### CUDA-specific Config
-
-```yaml
-backend:
-  deploy:
-    resources:
-      reservations:
-        devices:
-          - driver: nvidia
-            count: all
-            capabilities: [gpu]
-
-vllm:
-  image: vllm/vllm-openai:latest
-  runtime: nvidia
+  # vLLM containers are spawned dynamically by the backend via the Docker SDK.
 ```
 
 ### ROCm-specific Config
 
+vLLM containers spawned at runtime use the official prebuilt image with these
+flags (mirroring the [vLLM ROCm docs](https://docs.vllm.ai/en/stable/deployment/docker/#amd-rocm)):
+
 ```yaml
-vllm:
-  image: vllm/vllm-openai:rocm
-  devices:
-    - /dev/kfd
-    - /dev/dri
-  group_add:
-    - video
-  environment:
-    ROCR_VISIBLE_DEVICES: "0"
+image: vllm/vllm-openai-rocm:latest
+ipc_mode: host
+devices:
+  - /dev/kfd
+  - /dev/dri/renderD128   # enumerated at runtime via glob — not passed as a dir
+  - /dev/dri/card0
+group_add:
+  - video   # GID for /dev/dri/card0
+  - render  # GID for /dev/kfd and /dev/dri/renderD128
+cap_add:
+  - SYS_PTRACE
+security_opt:
+  - seccomp=unconfined
 ```
+
+> **Note:** The Docker Python SDK requires individual device *file* paths — passing
+> `/dev/dri` (a directory) silently skips the render nodes. `vllm_manager.py` uses
+> `glob.glob` to enumerate the actual files at container-spawn time.
+
+> **Known issue:** Containers are currently exiting immediately on this host.
+> See [docs/rocm-container-troubleshooting.md](../docs/rocm-container-troubleshooting.md).
 
 ---
 

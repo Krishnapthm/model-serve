@@ -127,7 +127,7 @@ backend/
 | `pipeline_tag` | TEXT        | e.g. `text-generation`                   |
 | `endpoint_url` | TEXT        | Internal vLLM endpoint                   |
 | `status`       | ENUM        | `pending`, `running`, `stopped`, `error` |
-| `gpu_type`     | ENUM        | `cuda`, `rocm`                           |
+| `gpu_type`     | ENUM        | `rocm` (schema retains `cuda` for compat) |
 | `container_id` | TEXT        | Docker container ID                      |
 | `started_at`   | TIMESTAMPTZ |                                          |
 | `stopped_at`   | TIMESTAMPTZ | Nullable                                 |

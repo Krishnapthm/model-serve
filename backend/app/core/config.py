@@ -26,8 +26,15 @@ class Settings(BaseSettings):
 
     # vLLM
     vllm_host: str = "localhost"
-    vllm_port: int = 8080
-    vllm_image: str = "vllm/vllm-openai:latest"
+    # Port range used when allocating a port for a new vLLM container.
+    # Each concurrently-served model gets its own port from this range.
+    vllm_port_start: int = 8080
+    vllm_port_end: int = 8180
+    # GPU backend for spawned vLLM containers — always rocm for this deployment.
+    vllm_gpu_type: str = "rocm"
+    # Official prebuilt vLLM image for AMD ROCm.
+    # See: https://docs.vllm.ai/en/stable/deployment/docker/#amd-rocm
+    vllm_rocm_image: str = "vllm/vllm-openai-rocm:latest"
 
     # App
     api_v1_prefix: str = "/api/v1"

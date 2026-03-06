@@ -2,7 +2,8 @@
 
 from fastapi import APIRouter, Depends
 
-from app.api.deps import get_vllm_manager, get_current_user
+from app.api.deps import get_vllm_manager, get_current_user, get_settings
+from app.core.config import Settings
 from app.models.user import User
 from app.schemas.serve import ServeCreate
 from app.services.vllm_manager import VLLMManager
@@ -15,11 +16,15 @@ async def serve_model(
     body: ServeCreate,
     vllm: VLLMManager = Depends(get_vllm_manager),
     current_user: User = Depends(get_current_user),
+    settings: Settings = Depends(get_settings),
 ):
     """Pull and serve a model via vLLM. Returns 202 Accepted."""
+    # The GPU backend is a server-side concern — clients should not need to
+    # specify it. Fall back to the deployment's configured VLLM_GPU_TYPE.
+    gpu_type = settings.vllm_gpu_type  # rocm — gpu_type from client is ignored
     result = await vllm.serve(
         model_id=body.model_id,
-        gpu_type=body.gpu_type,
+        gpu_type=gpu_type,
         owner_id=current_user.id,
     )
     return {"data": result}

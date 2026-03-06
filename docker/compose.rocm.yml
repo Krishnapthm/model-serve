@@ -1,19 +1,19 @@
 # AMD ROCm GPU stack
 # Usage: docker compose -f docker/compose.rocm.yml up --build
+#
+# vLLM containers are NOT defined here — they are spawned dynamically by the
+# backend via the Docker SDK whenever a user requests to serve a model.
+# The backend pulls VLLM_ROCM_IMAGE, VLLM_PORT_START/END, and HF_TOKEN from
+# the environment to configure those containers at runtime.
+#
+# Prebuilt image: https://docs.vllm.ai/en/stable/deployment/docker/#amd-rocm
 
 include:
   - compose.base.yml
 
 services:
-  vllm:
-    image: vllm/vllm-openai-rocm:v0.16.0-base
-    devices:
-      - /dev/kfd
-      - /dev/dri
-    group_add:
-      - video
-    env_file: ../.env
+  backend:
     environment:
-      ROCR_VISIBLE_DEVICES: "0"
-    volumes:
-      - hf_cache:/root/.cache/huggingface
+      VLLM_GPU_TYPE: rocm
+      # Override the default image tag if you need a specific version, e.g.:
+      # VLLM_ROCM_IMAGE: vllm/vllm-openai-rocm:v0.8.5
