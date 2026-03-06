@@ -1,11 +1,13 @@
 # Local development stack — no GPU required
-# Usage: docker compose -f docker/compose.local.yml up --build
+# Usage (run from the project root):
+#   docker compose -f docker/compose.local.yml --env-file .env up --build
 #
 # Use this to test the dashboard, API keys, auth, etc.
 # Model serving (vLLM) is excluded — it requires a ROCm GPU.
 
 include:
-  - compose.base.yml
+  - path: compose.base.yml
+    env_file: ../.env
 
 services:
   frontend:

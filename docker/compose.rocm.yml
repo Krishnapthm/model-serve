@@ -1,11 +1,11 @@
 # AMD ROCm GPU stack
 #
-# Usage:
+# Usage (run from the project root):
 #   # Serve one model:
-#   docker compose -f docker/compose.rocm.yml --profile vllm-1 up --build
+#   docker compose -f docker/compose.rocm.yml --env-file .env --profile vllm-1 up --build
 #
 #   # Serve two models:
-#   docker compose -f docker/compose.rocm.yml --profile vllm-1 --profile vllm-2 up --build
+#   docker compose -f docker/compose.rocm.yml --env-file .env --profile vllm-1 --profile vllm-2 up --build
 #
 # Required .env variables:
 #   VLLM_MODEL_1, VLLM_MODEL_2, ... (HuggingFace model IDs)
@@ -18,7 +18,8 @@
 # Docs:  https://docs.vllm.ai/en/v0.4.1/getting_started/amd-installation.html
 
 include:
-  - compose.base.yml
+  - path: compose.base.yml
+    env_file: ../.env
 
 x-vllm-common: &vllm-common
   image: ${VLLM_ROCM_IMAGE:-vllm/vllm-openai-rocm:latest}
@@ -41,11 +42,6 @@ x-vllm-common: &vllm-common
   restart: unless-stopped
 
 services:
-  # Override backend to set VLLM_HOST to the Docker network hostname
-  backend:
-    environment:
-      VLLM_HOST: ${VLLM_HOST:-localhost}
-
   # --- vLLM model slots (activate via --profile) ---
 
   vllm-1:
