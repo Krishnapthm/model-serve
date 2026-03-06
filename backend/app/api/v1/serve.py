@@ -28,5 +28,7 @@ async def get_served(
     """Get a specific model slot. Poll until status is 'running'."""
     result = await vllm.get_model(slot)
     if result is None:
-        raise HTTPException(status_code=404, detail=f"Model slot {slot} is not configured")
+        raise HTTPException(
+            status_code=404, detail=f"Model slot {slot} is not configured"
+        )
     return {"data": result}

@@ -111,13 +111,13 @@ Admin sets VLLM_MODEL_1=... in .env
 
 ## What Changed from v0.1.0
 
-| v0.1.0 (old)                          | v0.2.0 (current)                        |
-| ------------------------------------- | ---------------------------------------- |
-| Docker SDK spawns vLLM containers     | Docker Compose defines vLLM services     |
-| Models selected from HuggingFace UI   | Models declared via env vars at deploy   |
-| `served_models` table tracks state    | Model state is ephemeral (health checks) |
-| CUDA + ROCm support planned           | ROCm only (CUDA to be added later)       |
-| Dynamic port allocation               | Fixed ports per slot (8081–8084)          |
-| Docker socket mounted in backend      | No Docker socket needed                  |
-| `docker` Python package required      | Removed — only `httpx` for health checks |
-| HuggingFace API browsing              | Removed — models are pre-declared        |
+| v0.1.0 (old)                        | v0.2.0 (current)                         |
+| ----------------------------------- | ---------------------------------------- |
+| Docker SDK spawns vLLM containers   | Docker Compose defines vLLM services     |
+| Models selected from HuggingFace UI | Models declared via env vars at deploy   |
+| `served_models` table tracks state  | Model state is ephemeral (health checks) |
+| CUDA + ROCm support planned         | ROCm only (CUDA to be added later)       |
+| Dynamic port allocation             | Fixed ports per slot (8081–8084)         |
+| Docker socket mounted in backend    | No Docker socket needed                  |
+| `docker` Python package required    | Removed — only `httpx` for health checks |
+| HuggingFace API browsing            | Removed — models are pre-declared        |

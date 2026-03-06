@@ -1,6 +1,6 @@
 # Frontend
 
-React single-page application for ModelServe. Provides model browsing, one-click serving, API key management, and copy-paste OpenAI SDK scripts for served models.
+React single-page application for ModelServe. Provides a dashboard for viewing configured model slots, their health status, API key management, and copy-paste OpenAI SDK scripts for served models.
 
 ## Stack
 
@@ -52,25 +52,24 @@ frontend/
 │   │   ├── login-form.tsx
 │   │   └── signup-form.tsx
 │   ├── pages/                # Route-level page components
-│   │   ├── models.tsx        # Browse HF models
-│   │   ├── served.tsx        # Served models dashboard
+│   │   ├── models.tsx        # Configured model slots (public)
+│   │   ├── served.tsx        # Served models dashboard (authed)
 │   │   ├── keys.tsx          # API key management
 │   │   ├── login.tsx
 │   │   └── signup.tsx
 │   ├── hooks/                # Custom React hooks + TanStack Query hooks
 │   │   ├── useAuth.ts
-│   │   ├── useModels.ts
-│   │   ├── useServe.ts
+│   │   ├── useModels.ts      # useConfiguredModels() — polls GET /models
+│   │   ├── useServe.ts       # useServedModels() — polls GET /serve
 │   │   └── useKeys.ts
 │   ├── lib/
 │   │   ├── api.ts            # HTTP client, base URL config
 │   │   └── utils.ts          # cn(), formatters
 │   └── types/                # Shared TypeScript types
-│       ├── api.ts
+│       ├── api.ts            # DataResponse, ErrorResponse
 │       ├── auth.ts
 │       ├── keys.ts
-│       ├── models.ts
-│       └── serve.ts
+│       └── serve.ts          # ServedModel, ModelStatus
 ├── components.json           # shadcn config
 ├── vite.config.ts
 ├── tsconfig.json

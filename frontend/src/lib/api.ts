@@ -1,8 +1,7 @@
 /** Axios API client with typed methods for all backend endpoints. */
 
 import axios from "axios";
-import type { ModelSummary, ModelDetail } from "@/types/models";
-import type { ServedModel, ServeRequest } from "@/types/serve";
+import type { ServedModel } from "@/types/serve";
 import type { APIKey, CreatedKey } from "@/types/keys";
 import type {
   AuthSession,
@@ -10,7 +9,7 @@ import type {
   SignupRequest,
   User,
 } from "@/types/auth";
-import type { PaginatedResponse, DataResponse } from "@/types/api";
+import type { DataResponse } from "@/types/api";
 
 function resolveApiBaseUrl() {
   const envBaseUrl = import.meta.env.VITE_API_BASE_URL?.trim();
@@ -83,47 +82,32 @@ export async function getMe(): Promise<User> {
 
 // --- Models ---
 
-export async function getModels(
-  category?: string,
-  q?: string,
-  page = 1,
-  pageSize = 20,
-): Promise<PaginatedResponse<ModelSummary>> {
-  const params: Record<string, string | number> = { page, page_size: pageSize };
-  if (category) params.category = category;
-  if (q) params.q = q;
-  const { data } = await api.get<PaginatedResponse<ModelSummary>>("/models", {
-    params,
-  });
-  return data;
+/** Get all configured model slots with health status (public). */
+export async function getConfiguredModels(): Promise<ServedModel[]> {
+  const { data } = await api.get<DataResponse<ServedModel[]>>("/models");
+  return data.data;
 }
 
-export async function getModel(modelId: string): Promise<ModelDetail> {
-  const { data } = await api.get<DataResponse<ModelDetail>>(
-    `/models/${modelId}`,
+/** Get a single model slot (public). */
+export async function getConfiguredModel(slot: number): Promise<ServedModel> {
+  const { data } = await api.get<DataResponse<ServedModel>>(
+    `/models/${slot}`,
   );
   return data.data;
 }
 
 // --- Serve ---
 
-export async function serveModel(req: ServeRequest): Promise<ServedModel> {
-  const { data } = await api.post<DataResponse<ServedModel>>("/serve", req);
-  return data.data;
-}
-
+/** Get served models (authenticated). */
 export async function getServedModels(): Promise<ServedModel[]> {
   const { data } = await api.get<DataResponse<ServedModel[]>>("/serve");
   return data.data;
 }
 
-export async function getServedModel(id: string): Promise<ServedModel> {
-  const { data } = await api.get<DataResponse<ServedModel>>(`/serve/${id}`);
+/** Get a single served model slot (authenticated). */
+export async function getServedModel(slot: number): Promise<ServedModel> {
+  const { data } = await api.get<DataResponse<ServedModel>>(`/serve/${slot}`);
   return data.data;
-}
-
-export async function stopModel(id: string): Promise<void> {
-  await api.delete(`/serve/${id}`);
 }
 
 // --- Keys ---

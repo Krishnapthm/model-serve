@@ -7,14 +7,11 @@ import { IconCopy, IconCheck } from "@tabler/icons-react";
 import { toast } from "sonner";
 
 interface EnvSnippetProps {
-    apiKey: string;
-    baseUrl: string;
+    snippet: string;
 }
 
-export function EnvSnippet({ apiKey, baseUrl }: EnvSnippetProps) {
+export function EnvSnippet({ snippet }: EnvSnippetProps) {
     const [copied, setCopied] = useState(false);
-
-    const snippet = `OPENAI_API_KEY=${apiKey}\nOPENAI_BASE_URL=${baseUrl}`;
 
     const handleCopy = async () => {
         await navigator.clipboard.writeText(snippet);
@@ -27,9 +24,7 @@ export function EnvSnippet({ apiKey, baseUrl }: EnvSnippetProps) {
         <Card className="bg-zinc-950 border-zinc-800">
             <CardContent className="p-4 relative">
                 <pre className="text-sm text-zinc-300 font-mono whitespace-pre-wrap break-all">
-                    <span className="text-emerald-400">OPENAI_API_KEY</span>={apiKey}
-                    {"\n"}
-                    <span className="text-emerald-400">OPENAI_BASE_URL</span>={baseUrl}
+                    {snippet}
                 </pre>
                 <Button
                     size="sm"

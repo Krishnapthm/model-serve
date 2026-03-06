@@ -42,8 +42,8 @@ The **first run** downloads the model weights from HuggingFace into a Docker vol
 | ----------- | -------------------------------------------------------- |
 | Frontend    | [http://localhost:3000](http://localhost:3000)           |
 | Backend API | [http://localhost:8000/docs](http://localhost:8000/docs) |
-| vLLM slot 1 | http://localhost:8081/v1                                |
-| vLLM slot 2 | http://localhost:8082/v1                                |
+| vLLM slot 1 | http://localhost:8081/v1                                 |
+| vLLM slot 2 | http://localhost:8082/v1                                 |
 
 ### Using the Models
 
@@ -114,19 +114,19 @@ Create an account with `POST /api/v1/auth/signup` (or log in with `POST /api/v1/
 
 `Authorization: Bearer <access_token>`
 
-| Method   | Path                  | Auth | Description               |
-| -------- | --------------------- | ---- | ------------------------- |
-| `GET`    | `/api/v1/health`      | No   | Health check              |
-| `POST`   | `/api/v1/auth/signup` | No   | Signup + token            |
-| `POST`   | `/api/v1/auth/login`  | No   | Login + token             |
-| `GET`    | `/api/v1/auth/me`     | Yes  | Current user              |
-| `GET`    | `/api/v1/models`      | No   | List configured models    |
-| `GET`    | `/api/v1/models/{n}`  | No   | Model slot detail         |
-| `GET`    | `/api/v1/serve`       | Yes  | List models (authed)      |
-| `GET`    | `/api/v1/serve/{n}`   | Yes  | Model slot detail (authed)|
-| `POST`   | `/api/v1/keys`        | Yes  | Create API key            |
-| `GET`    | `/api/v1/keys`        | Yes  | List keys                 |
-| `DELETE` | `/api/v1/keys/{id}`   | Yes  | Revoke key                |
+| Method   | Path                  | Auth | Description                |
+| -------- | --------------------- | ---- | -------------------------- |
+| `GET`    | `/api/v1/health`      | No   | Health check               |
+| `POST`   | `/api/v1/auth/signup` | No   | Signup + token             |
+| `POST`   | `/api/v1/auth/login`  | No   | Login + token              |
+| `GET`    | `/api/v1/auth/me`     | Yes  | Current user               |
+| `GET`    | `/api/v1/models`      | No   | List configured models     |
+| `GET`    | `/api/v1/models/{n}`  | No   | Model slot detail          |
+| `GET`    | `/api/v1/serve`       | Yes  | List models (authed)       |
+| `GET`    | `/api/v1/serve/{n}`   | Yes  | Model slot detail (authed) |
+| `POST`   | `/api/v1/keys`        | Yes  | Create API key             |
+| `GET`    | `/api/v1/keys`        | Yes  | List keys                  |
+| `DELETE` | `/api/v1/keys/{id}`   | Yes  | Revoke key                 |
 
 Full API docs at `http://localhost:8000/docs` when running.
 
@@ -136,11 +136,11 @@ FastAPI · PostgreSQL · React · Vite · shadcn/ui · TanStack Query · vLLM (R
 
 ## Documentation
 
-| Doc                                  | Description                                  |
-| ------------------------------------ | -------------------------------------------- |
-| [Architecture](docs/architecture.md) | System overview, service diagram, data flow  |
-| [Deployment](docs/deployment.md)     | Docker Compose, env vars, GPU setup          |
-| [API Reference](docs/api.md)        | Endpoints, auth, response shapes             |
-| [Backend](backend/README.md)         | FastAPI setup, DB schema, migrations, testing|
-| [Frontend](frontend/README.md)       | React setup, component library, auth flow    |
-| [Docker](docker/README.md)           | Compose variants, Dockerfiles, ports         |
+| Doc                                  | Description                                   |
+| ------------------------------------ | --------------------------------------------- |
+| [Architecture](docs/architecture.md) | System overview, service diagram, data flow   |
+| [Deployment](docs/deployment.md)     | Docker Compose, env vars, GPU setup           |
+| [API Reference](docs/api.md)         | Endpoints, auth, response shapes              |
+| [Backend](backend/README.md)         | FastAPI setup, DB schema, migrations, testing |
+| [Frontend](frontend/README.md)       | React setup, component library, auth flow     |
+| [Docker](docker/README.md)           | Compose variants, Dockerfiles, ports          |

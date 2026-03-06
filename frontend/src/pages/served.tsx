@@ -1,30 +1,17 @@
-/** Served models page — list running models, status, script dialog, stop. */
+/** Served models page — list running models with status and script dialog. */
 
 import { useState } from "react";
-import { useServedModels, useStopModel } from "@/hooks/useServe";
+import { useServedModels } from "@/hooks/useServe";
 import { StatusBadge } from "@/components/app/status-badge";
 import { ServeScriptDialog } from "@/components/app/serve-script-dialog";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
-import {
-    AlertDialog,
-    AlertDialogAction,
-    AlertDialogCancel,
-    AlertDialogContent,
-    AlertDialogDescription,
-    AlertDialogFooter,
-    AlertDialogHeader,
-    AlertDialogTitle,
-    AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
-import { IconPlayerStop, IconServer } from "@tabler/icons-react";
+import { IconServer } from "@tabler/icons-react";
 import type { ServedModel } from "@/types/serve";
 
 export default function ServedPage() {
     const { data: models, isLoading } = useServedModels();
-    const stopMutation = useStopModel();
     const [selectedModel, setSelectedModel] = useState<ServedModel | null>(null);
     const [scriptDialogOpen, setScriptDialogOpen] = useState(false);
 
@@ -49,7 +36,7 @@ export default function ServedPage() {
                 </div>
                 <div className="grid gap-3">
                     {Array.from({ length: 3 }).map((_, i) => (
-                        <Skeleton key={i} className="h-40 w-full rounded-lg" />
+                        <Skeleton key={i} className="h-28 w-full rounded-lg" />
                     ))}
                 </div>
             </div>
@@ -74,14 +61,14 @@ export default function ServedPage() {
                             <CardContent className="py-12 text-center">
                                 <IconServer size={40} className="mx-auto text-muted-foreground mb-3" />
                                 <p className="text-sm text-muted-foreground">
-                                    No models served yet. Go to Models to serve one.
+                                    No models served yet. Configure models via environment variables.
                                 </p>
                             </CardContent>
                         </Card>
                     ) : (
                         models.map((model) => (
                             <Card
-                                key={model.id}
+                                key={model.slot}
                                 role="button"
                                 tabIndex={0}
                                 onClick={() => openScriptDialog(model)}
@@ -99,56 +86,16 @@ export default function ServedPage() {
                                             <CardTitle className="text-base">{model.display_name}</CardTitle>
                                             <p className="text-xs text-muted-foreground font-mono">{model.model_id}</p>
                                         </div>
-                                        <div className="flex items-center gap-2">
-                                            <StatusBadge status={model.status} />
-                                            {(model.status === "running" || model.status === "pending") && (
-                                                <AlertDialog>
-                                                    <AlertDialogTrigger asChild>
-                                                        <Button
-                                                            size="sm"
-                                                            variant="outline"
-                                                            className="text-destructive"
-                                                            onClick={(e) => e.stopPropagation()}
-                                                            onKeyDown={(e) => e.stopPropagation()}
-                                                        >
-                                                            <IconPlayerStop size={14} className="mr-1" />
-                                                            Stop
-                                                        </Button>
-                                                    </AlertDialogTrigger>
-                                                    <AlertDialogContent className="backdrop-blur-md bg-background/80 border border-border/50">
-                                                        <AlertDialogHeader>
-                                                            <AlertDialogTitle>Stop {model.display_name}?</AlertDialogTitle>
-                                                            <AlertDialogDescription>
-                                                                This will stop the model and remove its container. Any clients using
-                                                                this endpoint will lose access.
-                                                            </AlertDialogDescription>
-                                                        </AlertDialogHeader>
-                                                        <AlertDialogFooter>
-                                                            <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                                            <AlertDialogAction
-                                                                onClick={() => stopMutation.mutate(model.id)}
-                                                                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                                                            >
-                                                                Stop Model
-                                                            </AlertDialogAction>
-                                                        </AlertDialogFooter>
-                                                    </AlertDialogContent>
-                                                </AlertDialog>
-                                            )}
-                                        </div>
+                                        <StatusBadge status={model.status} />
                                     </div>
                                 </CardHeader>
                                 <CardContent>
-                                    <p className="text-xs text-muted-foreground">
-                                        Click this card to open a copy-paste Python example script.
+                                    <p className="text-xs text-muted-foreground font-mono">
+                                        {model.endpoint_url}
                                     </p>
-                                    <div className="flex gap-4 mt-3 text-xs text-muted-foreground">
-                                        <span>GPU: {model.gpu_type.toUpperCase()}</span>
-                                        <span>Started: {new Date(model.started_at).toLocaleString()}</span>
-                                        {model.stopped_at && (
-                                            <span>Stopped: {new Date(model.stopped_at).toLocaleString()}</span>
-                                        )}
-                                    </div>
+                                    <p className="text-xs text-muted-foreground mt-2">
+                                        Click to view a copy-paste Python example script.
+                                    </p>
                                 </CardContent>
                             </Card>
                         ))

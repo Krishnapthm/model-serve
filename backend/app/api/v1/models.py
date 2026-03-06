@@ -25,5 +25,7 @@ async def get_model(
     """Get a single model slot by number."""
     model = await vllm.get_model(slot)
     if model is None:
-        raise HTTPException(status_code=404, detail=f"Model slot {slot} is not configured")
+        raise HTTPException(
+            status_code=404, detail=f"Model slot {slot} is not configured"
+        )
     return {"data": model}

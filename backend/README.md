@@ -100,6 +100,7 @@ VLLM_MODEL_4=
 ```
 
 The backend reads these settings and provides:
+
 - `GET /models` — public list of configured models with live health status
 - `GET /serve` — same list, but requires bearer auth
 
@@ -108,6 +109,7 @@ The `VLLMManager` service probes each vLLM instance's `/health` endpoint to dete
 ### API Keys
 
 API keys are managed through the dashboard (bearer auth required):
+
 - `POST /keys` — create a new key (plaintext returned once)
 - `GET /keys` — list keys (prefix + metadata only)
 - `DELETE /keys/{id}` — revoke a key
@@ -137,16 +139,16 @@ Users sign up / log in via email + password. The backend returns a JWT bearer to
 
 #### `api_keys`
 
-| Column         | Type        | Notes                                        |
-| -------------- | ----------- | -------------------------------------------- |
-| `id`           | UUID        | PK                                           |
-| `owner_id`     | UUID        | FK → `users.id`                              |
-| `name`         | TEXT        | User-provided label                          |
-| `key_hash`     | TEXT        | bcrypt hash — never store plaintext          |
-| `key_prefix`   | TEXT        | First 12 chars for display (e.g. `sk-ms_Ab1`)|
-| `created_at`   | TIMESTAMPTZ |                                              |
-| `last_used_at` | TIMESTAMPTZ | Nullable                                     |
-| `is_active`    | BOOLEAN     | Soft delete                                  |
+| Column         | Type        | Notes                                         |
+| -------------- | ----------- | --------------------------------------------- |
+| `id`           | UUID        | PK                                            |
+| `owner_id`     | UUID        | FK → `users.id`                               |
+| `name`         | TEXT        | User-provided label                           |
+| `key_hash`     | TEXT        | bcrypt hash — never store plaintext           |
+| `key_prefix`   | TEXT        | First 12 chars for display (e.g. `sk-ms_Ab1`) |
+| `created_at`   | TIMESTAMPTZ |                                               |
+| `last_used_at` | TIMESTAMPTZ | Nullable                                      |
+| `is_active`    | BOOLEAN     | Soft delete                                   |
 
 > **Note:** The `served_models` table from v0.1.0 has been dropped. Model state is now ephemeral — determined by environment config + live health checks.
 

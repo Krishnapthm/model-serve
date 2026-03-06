@@ -2,14 +2,14 @@
 
 ## Prerequisites
 
-| Requirement | Minimum |
-| ----------- | ------- |
-| Docker Engine | 24+ |
-| Docker Compose | v2.20+ (profiles support) |
-| AMD GPU | gfx900+ (Vega, RDNA, CDNA) |
-| ROCm driver | 6.x |
-| Host RAM | 16 GB (model-dependent) |
-| VRAM | Depends on model size |
+| Requirement    | Minimum                    |
+| -------------- | -------------------------- |
+| Docker Engine  | 24+                        |
+| Docker Compose | v2.20+ (profiles support)  |
+| AMD GPU        | gfx900+ (Vega, RDNA, CDNA) |
+| ROCm driver    | 6.x                        |
+| Host RAM       | 16 GB (model-dependent)    |
+| VRAM           | Depends on model size      |
 
 ---
 
@@ -96,39 +96,39 @@ docker compose down -v   # removes ALL volumes including database
 
 ### Core
 
-| Variable | Required | Default | Description |
-| -------- | -------- | ------- | ----------- |
-| `SECRET_KEY` | yes | — | JWT signing key |
-| `POSTGRES_PASSWORD` | yes | — | Database password |
-| `DATABASE_URL` | no | built from PG vars | Full async connection string |
+| Variable            | Required | Default            | Description                  |
+| ------------------- | -------- | ------------------ | ---------------------------- |
+| `SECRET_KEY`        | yes      | —                  | JWT signing key              |
+| `POSTGRES_PASSWORD` | yes      | —                  | Database password            |
+| `DATABASE_URL`      | no       | built from PG vars | Full async connection string |
 
 ### Model Slots
 
-| Variable | Required | Default | Description |
-| -------- | -------- | ------- | ----------- |
-| `VLLM_MODEL_1` | yes | — | HuggingFace model ID for slot 1 |
-| `VLLM_MODEL_2` | no | — | HuggingFace model ID for slot 2 |
-| `VLLM_MODEL_3` | no | — | HuggingFace model ID for slot 3 |
-| `VLLM_MODEL_4` | no | — | HuggingFace model ID for slot 4 |
+| Variable       | Required | Default | Description                     |
+| -------------- | -------- | ------- | ------------------------------- |
+| `VLLM_MODEL_1` | yes      | —       | HuggingFace model ID for slot 1 |
+| `VLLM_MODEL_2` | no       | —       | HuggingFace model ID for slot 2 |
+| `VLLM_MODEL_3` | no       | —       | HuggingFace model ID for slot 3 |
+| `VLLM_MODEL_4` | no       | —       | HuggingFace model ID for slot 4 |
 
 ### vLLM
 
-| Variable | Required | Default | Description |
-| -------- | -------- | ------- | ----------- |
-| `VLLM_HOST` | no | `localhost` | Hostname for vLLM services |
-| `VLLM_BASE_PORT` | no | `8081` | Port of slot 1 (slots increment by 1) |
-| `VLLM_API_KEY` | no | — | Bearer token for vLLM endpoints |
-| `VLLM_ROCM_IMAGE` | no | `vllm/vllm-openai-rocm:latest` | vLLM Docker image |
-| `HF_TOKEN` | no | — | HuggingFace token for gated models |
-| `VLLM_PORT_1`–`VLLM_PORT_4` | no | 8081–8084 | Override individual slot ports |
+| Variable                    | Required | Default                        | Description                           |
+| --------------------------- | -------- | ------------------------------ | ------------------------------------- |
+| `VLLM_HOST`                 | no       | `localhost`                    | Hostname for vLLM services            |
+| `VLLM_BASE_PORT`            | no       | `8081`                         | Port of slot 1 (slots increment by 1) |
+| `VLLM_API_KEY`              | no       | —                              | Bearer token for vLLM endpoints       |
+| `VLLM_ROCM_IMAGE`           | no       | `vllm/vllm-openai-rocm:latest` | vLLM Docker image                     |
+| `HF_TOKEN`                  | no       | —                              | HuggingFace token for gated models    |
+| `VLLM_PORT_1`–`VLLM_PORT_4` | no       | 8081–8084                      | Override individual slot ports        |
 
 ### Application
 
-| Variable | Required | Default | Description |
-| -------- | -------- | ------- | ----------- |
-| `APP_NAME` | no | `ModelServe` | Display name |
-| `API_V1_PREFIX` | no | `/api/v1` | API route prefix |
-| `BACKEND_CORS_ORIGINS` | no | `["*"]` | Allowed CORS origins |
+| Variable               | Required | Default      | Description          |
+| ---------------------- | -------- | ------------ | -------------------- |
+| `APP_NAME`             | no       | `ModelServe` | Display name         |
+| `API_V1_PREFIX`        | no       | `/api/v1`    | API route prefix     |
+| `BACKEND_CORS_ORIGINS` | no       | `["*"]`      | Allowed CORS origins |
 
 ---
 
@@ -136,12 +136,12 @@ docker compose down -v   # removes ALL volumes including database
 
 Each vLLM slot is behind a Docker Compose profile. Only activated slots consume GPU resources.
 
-| Profile | Service | Port | Env Var |
-| ------- | ------- | ---- | ------- |
-| `vllm-1` | vllm-1 | 8081 | `VLLM_MODEL_1` |
-| `vllm-2` | vllm-2 | 8082 | `VLLM_MODEL_2` |
-| `vllm-3` | vllm-3 | 8083 | `VLLM_MODEL_3` |
-| `vllm-4` | vllm-4 | 8084 | `VLLM_MODEL_4` |
+| Profile  | Service | Port | Env Var        |
+| -------- | ------- | ---- | -------------- |
+| `vllm-1` | vllm-1  | 8081 | `VLLM_MODEL_1` |
+| `vllm-2` | vllm-2  | 8082 | `VLLM_MODEL_2` |
+| `vllm-3` | vllm-3  | 8083 | `VLLM_MODEL_3` |
+| `vllm-4` | vllm-4  | 8084 | `VLLM_MODEL_4` |
 
 ---
 
@@ -196,10 +196,10 @@ docker compose exec postgres pg_dump -U modelserve modelserve > backup.sql
 
 ## Troubleshooting
 
-| Symptom | Cause | Fix |
-| ------- | ----- | --- |
-| `Permission denied: /dev/kfd` | ROCm not installed or user not in `render`/`video` groups | `sudo usermod -aG render,video $USER` and re-login |
-| vLLM OOM during model load | Not enough VRAM | Use a smaller model or enable quantization via vLLM args |
-| Model download hangs | Gated model without token | Set `HF_TOKEN` in `.env` |
-| Backend shows all models as `loading` | vLLM still downloading or crashed | Check `docker compose logs vllm-1` |
-| Port conflict on 8081 | Another service on that port | Change `VLLM_PORT_1` in `.env` |
+| Symptom                               | Cause                                                     | Fix                                                      |
+| ------------------------------------- | --------------------------------------------------------- | -------------------------------------------------------- |
+| `Permission denied: /dev/kfd`         | ROCm not installed or user not in `render`/`video` groups | `sudo usermod -aG render,video $USER` and re-login       |
+| vLLM OOM during model load            | Not enough VRAM                                           | Use a smaller model or enable quantization via vLLM args |
+| Model download hangs                  | Gated model without token                                 | Set `HF_TOKEN` in `.env`                                 |
+| Backend shows all models as `loading` | vLLM still downloading or crashed                         | Check `docker compose logs vllm-1`                       |
+| Port conflict on 8081                 | Another service on that port                              | Change `VLLM_PORT_1` in `.env`                           |

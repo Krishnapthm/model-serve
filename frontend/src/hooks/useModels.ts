@@ -1,22 +1,12 @@
-/** TanStack Query hooks for HuggingFace models. */
+/** TanStack Query hook for configured model slots. */
 
 import { useQuery } from "@tanstack/react-query";
-import { getModels, getModel } from "@/lib/api";
+import { getConfiguredModels } from "@/lib/api";
 
-export function useModels(category?: string, q?: string, page = 1, pageSize = 20) {
+export function useConfiguredModels() {
     return useQuery({
-        queryKey: ["models", category, q, page, pageSize],
-        queryFn: () => getModels(category, q, page, pageSize),
-        staleTime: 5 * 60 * 1000, // 5 min — HF model list doesn't change often
-        gcTime: 30 * 60 * 1000,
-    });
-}
-
-export function useModel(modelId: string) {
-    return useQuery({
-        queryKey: ["model", modelId],
-        queryFn: () => getModel(modelId),
-        staleTime: 5 * 60 * 1000,
-        enabled: !!modelId,
+        queryKey: ["models"],
+        queryFn: getConfiguredModels,
+        refetchInterval: 15_000, // Poll for health status
     });
 }

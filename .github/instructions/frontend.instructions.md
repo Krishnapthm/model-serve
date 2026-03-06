@@ -54,26 +54,12 @@ Apply `backdrop-blur-md bg-background/80` to **all** floating elements:
 <DialogContent className="backdrop-blur-md bg-background/80 border border-border/50">
 ```
 
-## Model Type Badges
+## Status Badges
 
-Use the shadcn `Badge` component with the correct mapping:
+Use the `StatusBadge` component from `src/components/app/status-badge.tsx` for model status. Only two statuses exist:
 
-```tsx
-const MODEL_TYPE_BADGE: Record<
-  string,
-  { label: string; variant: BadgeVariant }
-> = {
-  "text-generation": { label: "LLM", variant: "default" },
-  "feature-extraction": { label: "Text Embedding", variant: "secondary" },
-  "text-to-image": { label: "Image Generation", variant: "outline" },
-  "text-to-video": { label: "Video Generation", variant: "destructive" },
-  "automatic-speech-recognition": {
-    label: "Speech-to-Text",
-    variant: "secondary",
-  },
-  "image-to-text": { label: "Vision-Language", variant: "outline" },
-};
-```
+- `running` — green badge
+- `loading` — yellow/pulsing badge
 
 ## Data Fetching — TanStack Query
 
@@ -81,37 +67,24 @@ All server state goes through TanStack Query. **No** raw `fetch`/`axios` in comp
 
 ```tsx
 // hooks/useModels.ts
-export function useModels(category?: string) {
+export function useConfiguredModels() {
   return useQuery({
-    queryKey: ["models", category],
-    queryFn: () => api.getModels(category),
-    staleTime: 5 * 60 * 1000,
+    queryKey: ["models"],
+    queryFn: getConfiguredModels,
+    refetchInterval: 15_000,
   });
 }
 ```
 
 ### Cache Rules
 
-| Data                | staleTime | Notes                                              |
-| ------------------- | --------- | -------------------------------------------------- |
-| HF model list       | 5 min     | Don't hammer the HF API                            |
-| Served model status | 30 sec    | Poll with `refetchInterval: 10000` while `pending` |
-| API keys            | 0         | Always fresh after mutations                       |
+| Data                   | staleTime | Notes                                               |
+| ---------------------- | --------- | --------------------------------------------------- |
+| Configured model slots | default   | Poll with `refetchInterval: 15_000`                 |
+| Served model status    | 30 sec    | Poll with `refetchInterval: 10_000` while `loading` |
+| API keys               | 0         | Always fresh after mutations                        |
 
-### Mutations
-
-```tsx
-export function useServeModel() {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: api.serveModel,
-    onSuccess: () =>
-      queryClient.invalidateQueries({ queryKey: ["served-models"] }),
-    onError: (err) =>
-      toast.error("Failed to serve model", { description: err.message }),
-  });
-}
-```
+> **No mutation hooks exist** — models are configured at deploy time via environment variables. There are no `POST /serve` or `DELETE /serve` endpoints.
 
 ## Auth Flow
 
@@ -121,32 +94,13 @@ export function useServeModel() {
 - Protect app routes with `ProtectedRoute` (validates `/auth/me` via TanStack Query).
 - Logout must clear local token state **and** TanStack Query cache.
 
-## Client-Side Search
-
-Model search must filter **client-side** against cached TanStack Query data. Never fire a new API request per keystroke.
-
-```tsx
-const filtered = useMemo(
-  () =>
-    models?.filter(
-      (m) =>
-        m.id.toLowerCase().includes(query.toLowerCase()) ||
-        m.description?.toLowerCase().includes(query.toLowerCase()),
-    ),
-  [models, query],
-);
-```
-
-Use a debounced input (250ms) to avoid unnecessary re-renders.
-
 ## State Management
 
 | State type                          | Where it lives            |
 | ----------------------------------- | ------------------------- |
 | Server data (models, keys, served)  | TanStack Query            |
 | UI state (modals, selected model)   | `useState` / `useReducer` |
-| Global UI (theme, HF token)         | React Context or Zustand  |
-| URL state (category filter, search) | URL search params         |
+| Global UI (theme)                   | React Context or Zustand  |
 
 ## TypeScript
 

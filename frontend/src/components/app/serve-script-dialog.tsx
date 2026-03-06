@@ -22,13 +22,7 @@ interface ServeScriptDialogProps {
 }
 
 function resolveDynamicBaseUrl(model: ServedModel): string {
-    const source = model.env_snippet?.OPENAI_BASE_URL ?? model.endpoint_url;
-    if (!source) {
-        if (typeof window !== "undefined") {
-            return `${window.location.protocol}//${window.location.hostname}:8080/v1`;
-        }
-        return "http://localhost:8080/v1";
-    }
+    const source = model.endpoint_url;
 
     try {
         const parsed = new URL(source);

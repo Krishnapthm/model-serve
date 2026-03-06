@@ -67,13 +67,13 @@ Maximum 4 models can be served simultaneously.
 
 ```yaml
 services:
-  db:        # PostgreSQL 17 — healthcheck enabled
-  backend:   # FastAPI — depends on db, runs migrations on start
-  frontend:  # Vite/React — serves on :3000
-  vllm-1:    # vLLM slot 1 (profile: vllm-1) — ROCm
-  vllm-2:    # vLLM slot 2 (profile: vllm-2) — ROCm
-  vllm-3:    # vLLM slot 3 (profile: vllm-3) — ROCm
-  vllm-4:    # vLLM slot 4 (profile: vllm-4) — ROCm
+  db: # PostgreSQL 17 — healthcheck enabled
+  backend: # FastAPI — depends on db, runs migrations on start
+  frontend: # Vite/React — serves on :3000
+  vllm-1: # vLLM slot 1 (profile: vllm-1) — ROCm
+  vllm-2: # vLLM slot 2 (profile: vllm-2) — ROCm
+  vllm-3: # vLLM slot 3 (profile: vllm-3) — ROCm
+  vllm-4: # vLLM slot 4 (profile: vllm-4) — ROCm
 ```
 
 ### ROCm Configuration
@@ -120,21 +120,21 @@ Builds the Vite app and serves it on port 3000.
 
 ## Ports
 
-| Service    | Port | Description                     |
-| ---------- | ---- | ------------------------------- |
-| Frontend   | 3000 | React app                       |
-| Backend    | 8000 | FastAPI (OpenAPI at `/docs`)    |
-| vLLM-1     | 8081 | OpenAI-compatible endpoint      |
-| vLLM-2     | 8082 | OpenAI-compatible endpoint      |
-| vLLM-3     | 8083 | OpenAI-compatible endpoint      |
-| vLLM-4     | 8084 | OpenAI-compatible endpoint      |
-| PostgreSQL | 5432 | Internal only (not exposed)     |
+| Service    | Port | Description                  |
+| ---------- | ---- | ---------------------------- |
+| Frontend   | 3000 | React app                    |
+| Backend    | 8000 | FastAPI (OpenAPI at `/docs`) |
+| vLLM-1     | 8081 | OpenAI-compatible endpoint   |
+| vLLM-2     | 8082 | OpenAI-compatible endpoint   |
+| vLLM-3     | 8083 | OpenAI-compatible endpoint   |
+| vLLM-4     | 8084 | OpenAI-compatible endpoint   |
+| PostgreSQL | 5432 | Internal only (not exposed)  |
 
 ---
 
 ## Volumes
 
-| Volume     | Purpose                                                                 |
-| ---------- | ----------------------------------------------------------------------- |
-| `pgdata`   | PostgreSQL data persistence                                             |
-| `hf_cache` | HuggingFace model cache — survives restarts, prevents re-downloading   |
+| Volume     | Purpose                                                              |
+| ---------- | -------------------------------------------------------------------- |
+| `pgdata`   | PostgreSQL data persistence                                          |
+| `hf_cache` | HuggingFace model cache — survives restarts, prevents re-downloading |

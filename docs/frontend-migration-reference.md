@@ -8,15 +8,15 @@
 
 ## 1. High-Level Summary
 
-| What changed | Detail |
-| ------------ | ------ |
-| Model discovery removed | No more HuggingFace Hub browsing. Models are declared at deploy time via env vars. |
-| Model lifecycle removed | `POST /serve` (deploy) and `DELETE /serve/{id}` (stop) no longer exist. |
-| Slot-based model listing | Models are identified by **slot number** (1–4), not UUID. |
-| Status simplified | Only two statuses: `running` and `loading`. `pending`, `stopped`, `error` are gone. |
-| No pagination on models | `/models` returns a flat list (max 4 items). No `PaginatedResponse`. |
-| `env_snippet` is a string | Was `{ OPENAI_API_KEY, OPENAI_BASE_URL }` object, now a shell `export` string. |
-| Auth unchanged | JWT login/signup, API key CRUD — all identical. |
+| What changed              | Detail                                                                              |
+| ------------------------- | ----------------------------------------------------------------------------------- |
+| Model discovery removed   | No more HuggingFace Hub browsing. Models are declared at deploy time via env vars.  |
+| Model lifecycle removed   | `POST /serve` (deploy) and `DELETE /serve/{id}` (stop) no longer exist.             |
+| Slot-based model listing  | Models are identified by **slot number** (1–4), not UUID.                           |
+| Status simplified         | Only two statuses: `running` and `loading`. `pending`, `stopped`, `error` are gone. |
+| No pagination on models   | `/models` returns a flat list (max 4 items). No `PaginatedResponse`.                |
+| `env_snippet` is a string | Was `{ OPENAI_API_KEY, OPENAI_BASE_URL }` object, now a shell `export` string.      |
+| Auth unchanged            | JWT login/signup, API key CRUD — all identical.                                     |
 
 ---
 
@@ -24,12 +24,12 @@
 
 These endpoints no longer exist. Any frontend code calling them must be removed.
 
-| Old Endpoint | Purpose | Replacement |
-| ------------ | ------- | ----------- |
-| `GET /models?category=&q=&page=&page_size=` | Browse HuggingFace Hub | `GET /models` (no params, returns configured slots) |
-| `GET /models/{model_id}` (string HF model ID) | HuggingFace model detail | `GET /models/{slot}` (integer slot number) |
-| `POST /serve` | Deploy a model | Removed — models are configured at deploy time |
-| `DELETE /serve/{id}` | Stop a model | Removed — models are managed by Docker Compose |
+| Old Endpoint                                  | Purpose                  | Replacement                                         |
+| --------------------------------------------- | ------------------------ | --------------------------------------------------- |
+| `GET /models?category=&q=&page=&page_size=`   | Browse HuggingFace Hub   | `GET /models` (no params, returns configured slots) |
+| `GET /models/{model_id}` (string HF model ID) | HuggingFace model detail | `GET /models/{slot}` (integer slot number)          |
+| `POST /serve`                                 | Deploy a model           | Removed — models are configured at deploy time      |
+| `DELETE /serve/{id}`                          | Stop a model             | Removed — models are managed by Docker Compose      |
 
 ---
 
@@ -38,6 +38,7 @@ These endpoints no longer exist. Any frontend code calling them must be removed.
 ### `GET /models`
 
 **Before (v0.1.0):**
+
 ```json
 {
   "data": [
@@ -57,6 +58,7 @@ These endpoints no longer exist. Any frontend code calling them must be removed.
 ```
 
 **After (v0.2.0):**
+
 ```json
 {
   "data": [
@@ -83,6 +85,7 @@ These endpoints no longer exist. Any frontend code calling them must be removed.
 **Response:** Same shape as one item in the list above, wrapped in `{ "data": ... }`.
 
 **404** when slot is not configured:
+
 ```json
 { "detail": "Model slot 1 is not configured" }
 ```
@@ -92,6 +95,7 @@ These endpoints no longer exist. Any frontend code calling them must be removed.
 **Before:** Returned `ServedModel[]` with fields: `id` (UUID), `model_id`, `display_name`, `pipeline_tag`, `status` (pending|running|stopped|error), `endpoint_url`, `gpu_type`, `started_at`, `stopped_at`, `env_snippet` (object).
 
 **After:** Returns the same data as `GET /models` (slot-based), just behind auth.
+
 ```json
 {
   "data": [
@@ -122,46 +126,49 @@ The entire file is obsolete. There is no `ModelSummary`, `ModelDetail`, `ModelCa
 ### Rewrite: `types/serve.ts`
 
 **Old type:**
+
 ```typescript
 export type ModelStatus = "pending" | "running" | "stopped" | "error";
 
 export interface ServedModel {
-    id: string;
-    model_id: string;
-    display_name: string;
-    pipeline_tag: string | null;
-    status: ModelStatus;
-    endpoint_url: string | null;
-    gpu_type: string;
-    started_at: string;
-    stopped_at: string | null;
-    env_snippet?: {
-        OPENAI_API_KEY: string;
-        OPENAI_BASE_URL: string;
-    };
+  id: string;
+  model_id: string;
+  display_name: string;
+  pipeline_tag: string | null;
+  status: ModelStatus;
+  endpoint_url: string | null;
+  gpu_type: string;
+  started_at: string;
+  stopped_at: string | null;
+  env_snippet?: {
+    OPENAI_API_KEY: string;
+    OPENAI_BASE_URL: string;
+  };
 }
 
 export interface ServeRequest {
-    model_id: string;
-    gpu_type?: string;
+  model_id: string;
+  gpu_type?: string;
 }
 ```
 
 **New type:**
+
 ```typescript
 export type ModelStatus = "running" | "loading";
 
 export interface ServedModel {
-    slot: number;
-    model_id: string;
-    display_name: string;
-    endpoint_url: string;
-    status: ModelStatus;
-    env_snippet: string;
+  slot: number;
+  model_id: string;
+  display_name: string;
+  endpoint_url: string;
+  status: ModelStatus;
+  env_snippet: string;
 }
 ```
 
 Key differences:
+
 - `id` (UUID) → `slot` (number, 1–4)
 - `pipeline_tag` — removed
 - `gpu_type` — removed
@@ -189,14 +196,14 @@ The HuggingFace browsing hooks (`useModels`, `useModel`) are obsolete. Replace w
 
 ```typescript
 export function useConfiguredModels() {
-    return useQuery({
-        queryKey: ["models"],
-        queryFn: async () => {
-            const { data } = await api.get<{ data: ServedModel[] }>("/models");
-            return data.data;
-        },
-        refetchInterval: 15_000, // Poll for health status
-    });
+  return useQuery({
+    queryKey: ["models"],
+    queryFn: async () => {
+      const { data } = await api.get<{ data: ServedModel[] }>("/models");
+      return data.data;
+    },
+    refetchInterval: 15_000, // Poll for health status
+  });
 }
 ```
 
@@ -217,37 +224,40 @@ These are unchanged.
 ## 6. API Client Changes Required (`lib/api.ts`)
 
 ### Remove these functions:
+
 - `getModels(category, q, page, pageSize)` — HF browsing
 - `getModel(modelId: string)` — HF detail
 - `serveModel(req: ServeRequest)` — deploy
 - `stopModel(id: string)` — stop
 
 ### Replace with:
+
 ```typescript
 /** Get all configured model slots with health status. */
 export async function getConfiguredModels(): Promise<ServedModel[]> {
-    const { data } = await api.get<{ data: ServedModel[] }>("/models");
-    return data.data;
+  const { data } = await api.get<{ data: ServedModel[] }>("/models");
+  return data.data;
 }
 
 /** Get a single model slot. */
 export async function getConfiguredModel(slot: number): Promise<ServedModel> {
-    const { data } = await api.get<{ data: ServedModel }>(`/models/${slot}`);
-    return data.data;
+  const { data } = await api.get<{ data: ServedModel }>(`/models/${slot}`);
+  return data.data;
 }
 ```
 
 ### Update `getServedModels` / `getServedModel`:
+
 ```typescript
 /** Get served models (authenticated). */
 export async function getServedModels(): Promise<ServedModel[]> {
-    const { data } = await api.get<{ data: ServedModel[] }>("/serve");
-    return data.data;
+  const { data } = await api.get<{ data: ServedModel[] }>("/serve");
+  return data.data;
 }
 
 export async function getServedModel(slot: number): Promise<ServedModel> {
-    const { data } = await api.get<{ data: ServedModel }>(`/serve/${slot}`);
-    return data.data;
+  const { data } = await api.get<{ data: ServedModel }>(`/serve/${slot}`);
+  return data.data;
 }
 ```
 
@@ -262,6 +272,7 @@ export async function getServedModel(slot: number): Promise<ServedModel> {
 **Old behavior:** Browse HuggingFace Hub with categories, search, pagination, "Serve" button.
 
 **New behavior:** Show the configured model slots (max 4 cards). Each card shows:
+
 - `display_name` and `model_id`
 - `status` badge (running / loading)
 - `endpoint_url`
@@ -274,6 +285,7 @@ No search, no categories, no pagination, no "Serve" button.
 **Old behavior:** List served models with Stop button, status polling, click-to-open script dialog.
 
 **New behavior:** Same listing but:
+
 - Remove the Stop button entirely (cannot stop via API)
 - Remove `AlertDialog` for stop confirmation
 - Key is `slot` not `id`
@@ -292,6 +304,7 @@ No search, no categories, no pagination, no "Serve" button.
 **Old:** Shows HF model with badge_color, pipeline_tag label, downloads/likes stats, "Serve" button.
 
 **New:** Shows a configured vLLM slot with:
+
 - `display_name` / `model_id`
 - Status badge
 - `endpoint_url` (copyable)
@@ -302,6 +315,7 @@ No "Serve" button, no download/like counts, no category badge.
 ### `components/app/status-badge.tsx` — Simplify
 
 Remove `pending`, `stopped`, `error` states. Only two states:
+
 - `running` — green badge
 - `loading` — yellow/pulsing badge
 
@@ -314,16 +328,17 @@ Remove `pending`, `stopped`, `error` states. Only two states:
 ### `components/app/env-snippet.tsx` — Update
 
 The props should change since `env_snippet` is now a single shell string:
+
 ```typescript
 // Old
 interface EnvSnippetProps {
-    apiKey: string;
-    baseUrl: string;
+  apiKey: string;
+  baseUrl: string;
 }
 
 // New — just display the preformatted string
 interface EnvSnippetProps {
-    snippet: string;
+  snippet: string;
 }
 ```
 
@@ -344,9 +359,9 @@ Consider whether you want to keep both pages or merge them into one. The backend
 
 ## 10. Files to Delete
 
-| File | Reason |
-| ---- | ------ |
-| `types/models.ts` | HuggingFace model types — no longer used |
+| File                 | Reason                                      |
+| -------------------- | ------------------------------------------- |
+| `types/models.ts`    | HuggingFace model types — no longer used    |
 | `hooks/useModels.ts` | HuggingFace browsing hooks — no longer used |
 
 ---
@@ -356,12 +371,12 @@ Consider whether you want to keep both pages or merge them into one. The backend
 ```typescript
 // The single model type used everywhere now
 interface ServedModel {
-    slot: number;           // 1-4
-    model_id: string;       // e.g. "meta-llama/Llama-3.1-8B-Instruct"
-    display_name: string;   // e.g. "Llama-3.1-8B-Instruct"
-    endpoint_url: string;   // e.g. "http://localhost:8081/v1"
-    status: "running" | "loading";
-    env_snippet: string;    // e.g. "export OPENAI_BASE_URL=http://localhost:8081/v1"
+  slot: number; // 1-4
+  model_id: string; // e.g. "meta-llama/Llama-3.1-8B-Instruct"
+  display_name: string; // e.g. "Llama-3.1-8B-Instruct"
+  endpoint_url: string; // e.g. "http://localhost:8081/v1"
+  status: "running" | "loading";
+  env_snippet: string; // e.g. "export OPENAI_BASE_URL=http://localhost:8081/v1"
 }
 
 // All list endpoints return:  { data: ServedModel[] }
@@ -370,6 +385,7 @@ interface ServedModel {
 ```
 
 If `VLLM_API_KEY` is set, `env_snippet` includes both lines:
+
 ```
 export OPENAI_BASE_URL=http://localhost:8081/v1
 export OPENAI_API_KEY=your-key

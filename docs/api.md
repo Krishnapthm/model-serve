@@ -86,14 +86,14 @@ List all configured model slots with health status.
 ]
 ```
 
-| Field | Type | Description |
-| ----- | ---- | ----------- |
-| `slot` | int | Slot number (1–4) |
-| `model_id` | string | HuggingFace model ID |
+| Field          | Type   | Description                           |
+| -------------- | ------ | ------------------------------------- |
+| `slot`         | int    | Slot number (1–4)                     |
+| `model_id`     | string | HuggingFace model ID                  |
 | `display_name` | string | Short name (last segment of model_id) |
-| `endpoint_url` | string | OpenAI-compatible base URL |
-| `status` | string | `running` or `loading` |
-| `env_snippet` | string | Shell export line for OpenAI SDK |
+| `endpoint_url` | string | OpenAI-compatible base URL            |
+| `status`       | string | `running` or `loading`                |
+| `env_snippet`  | string | Shell export line for OpenAI SDK      |
 
 ### GET /models/{slot}
 
@@ -221,12 +221,12 @@ Revoke an API key.
 
 ## Error Codes
 
-| Code | HTTP Status | Description |
-| ---- | ----------- | ----------- |
-| `KEY_NOT_FOUND` | 404 | API key does not exist |
-| `INVALID_API_KEY` | 401 | API key is invalid or revoked |
-| `USER_ALREADY_EXISTS` | 409 | Username is taken |
-| `INVALID_CREDENTIALS` | 401 | Wrong username or password |
-| `INVALID_AUTH_TOKEN` | 401 | JWT is expired or malformed |
+| Code                  | HTTP Status | Description                   |
+| --------------------- | ----------- | ----------------------------- |
+| `KEY_NOT_FOUND`       | 404         | API key does not exist        |
+| `INVALID_API_KEY`     | 401         | API key is invalid or revoked |
+| `USER_ALREADY_EXISTS` | 409         | Username is taken             |
+| `INVALID_CREDENTIALS` | 401         | Wrong username or password    |
+| `INVALID_AUTH_TOKEN`  | 401         | JWT is expired or malformed   |
 
 > **Removed in v0.2.0:** `MODEL_NOT_FOUND`, `MODEL_PULL_ERROR`, `GPU_UNAVAILABLE`, `SERVED_MODEL_NOT_FOUND`, `VLLM_ERROR` — these no longer apply since model lifecycle is managed by Docker Compose, not the backend.

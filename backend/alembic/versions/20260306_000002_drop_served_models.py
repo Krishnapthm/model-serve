@@ -23,12 +23,16 @@ def upgrade() -> None:
     op.drop_table("served_models")
 
     model_status = postgresql.ENUM(
-        "pending", "running", "stopped", "error",
+        "pending",
+        "running",
+        "stopped",
+        "error",
         name="modelstatus",
         create_type=False,
     )
     gpu_type = postgresql.ENUM(
-        "cuda", "rocm",
+        "cuda",
+        "rocm",
         name="gputype",
         create_type=False,
     )
@@ -41,12 +45,16 @@ def downgrade() -> None:
     import sqlalchemy as sa
 
     model_status = postgresql.ENUM(
-        "pending", "running", "stopped", "error",
+        "pending",
+        "running",
+        "stopped",
+        "error",
         name="modelstatus",
         create_type=False,
     )
     gpu_type = postgresql.ENUM(
-        "cuda", "rocm",
+        "cuda",
+        "rocm",
         name="gputype",
         create_type=False,
     )
