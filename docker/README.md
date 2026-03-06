@@ -17,20 +17,20 @@ Docker Compose setup for ModelServe. AMD ROCm GPU-accelerated and local developm
 ## Quickstart
 
 ```bash
-# From repo root:
+# Always run from the repo root (so Compose can find .env for variable substitution)
 
 # Configure
 cp .env.example .env
 # Edit .env — set VLLM_MODEL_1, HF_TOKEN, SECRET_KEY, POSTGRES_PASSWORD
 
 # AMD ROCm — serve one model
-docker compose -f docker/compose.rocm.yml --profile vllm-1 up --build
+docker compose --project-directory . -f docker/compose.rocm.yml --profile vllm-1 up --build
 
 # AMD ROCm — serve two models
-docker compose -f docker/compose.rocm.yml --profile vllm-1 --profile vllm-2 up --build
+docker compose --project-directory . -f docker/compose.rocm.yml --profile vllm-1 --profile vllm-2 up --build
 
 # Local development (no GPU)
-docker compose -f docker/compose.local.yml up --build
+docker compose --project-directory . -f docker/compose.local.yml up --build
 ```
 
 ---
@@ -49,8 +49,8 @@ VLLM_MODEL_4=
 Each slot is activated via a Compose profile:
 
 ```bash
-# Activate slots 1 and 2
-docker compose -f docker/compose.rocm.yml --profile vllm-1 --profile vllm-2 up --build
+# Activate slots 1 and 2 (run from repo root)
+docker compose --project-directory . -f docker/compose.rocm.yml --profile vllm-1 --profile vllm-2 up --build
 ```
 
 Maximum 4 models can be served simultaneously.

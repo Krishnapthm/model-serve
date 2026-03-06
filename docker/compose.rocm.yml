@@ -28,6 +28,10 @@ x-vllm-common: &vllm-common
     - /dev/dri
   group_add:
     - video
+    - render
+  device_cgroup_rules:
+    # Allow access to all DRI character devices (major 226)
+    - 'c 226:* rmw'
   cap_add:
     - SYS_PTRACE
   security_opt:
@@ -50,8 +54,6 @@ services:
     command:
       - --model
       - ${VLLM_MODEL_1}
-      - --device
-      - rocm
       - --host
       - "0.0.0.0"
       - --port
@@ -69,8 +71,6 @@ services:
     command:
       - --model
       - ${VLLM_MODEL_2}
-      - --device
-      - rocm
       - --host
       - "0.0.0.0"
       - --port
@@ -88,8 +88,6 @@ services:
     command:
       - --model
       - ${VLLM_MODEL_3}
-      - --device
-      - rocm
       - --host
       - "0.0.0.0"
       - --port
@@ -107,8 +105,6 @@ services:
     command:
       - --model
       - ${VLLM_MODEL_4}
-      - --device
-      - rocm
       - --host
       - "0.0.0.0"
       - --port
