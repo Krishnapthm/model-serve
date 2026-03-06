@@ -21,10 +21,9 @@ cp .env.example .env
 # Edit .env — set VLLM_MODEL_1, HF_TOKEN, SECRET_KEY, POSTGRES_PASSWORD
 
 # Start with one model
-docker compose -f docker/compose.rocm.yml --profile vllm-1 up --build
-
+docker compose -f docker/compose.rocm.yml --env-file .env --profile vllm-1 up --build
 # Start with two models
-docker compose -f docker/compose.rocm.yml --profile vllm-1 --profile vllm-2 up --build
+docker compose -f docker/compose.rocm.yml --env-file .env --profile vllm-1 --profile vllm-2 up --build
 
 # Local development (frontend HMR, no GPU/vLLM)
 docker compose -f docker/compose.local.yml up --build
