@@ -1,32 +1,14 @@
-"""Pydantic schemas for model serving."""
+"""Pydantic schemas for served model info."""
 
-import uuid
-from datetime import datetime
-
-from pydantic import BaseModel, ConfigDict
-
-
-class ServeCreate(BaseModel):
-    """Request body for POST /serve."""
-
-    model_id: str
-    # gpu_type is optional and ignored by this deployment — the server always
-    # uses the VLLM_GPU_TYPE configured at deploy time (rocm).
-    gpu_type: str | None = None
+from pydantic import BaseModel
 
 
 class ServedModelRead(BaseModel):
-    """Response schema for a served model."""
+    """Response schema for a configured vLLM model slot."""
 
-    model_config = ConfigDict(from_attributes=True)
-
-    id: uuid.UUID
+    slot: int
     model_id: str
     display_name: str
-    pipeline_tag: str | None = None
+    endpoint_url: str
     status: str
-    gpu_type: str
-    endpoint_url: str | None = None
-    started_at: datetime
-    stopped_at: datetime | None = None
-    env_snippet: dict[str, str] | None = None
+    env_snippet: dict[str, str]

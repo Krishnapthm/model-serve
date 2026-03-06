@@ -139,21 +139,11 @@ async def get_current_user(
 # --- Service factories ---
 
 
-def get_hf_service(settings: Settings = Depends(get_settings)):
-    """Provide a HuggingFaceService instance."""
-    from app.services.huggingface import HuggingFaceService
-
-    return HuggingFaceService(settings)
-
-
-def get_vllm_manager(
-    db: AsyncSession = Depends(get_db),
-    settings: Settings = Depends(get_settings),
-):
+def get_vllm_manager(settings: Settings = Depends(get_settings)):
     """Provide a VLLMManager instance."""
     from app.services.vllm_manager import VLLMManager
 
-    return VLLMManager(db, settings)
+    return VLLMManager(settings)
 
 
 def get_key_service(db: AsyncSession = Depends(get_db)):

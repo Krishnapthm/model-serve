@@ -1,138 +1,232 @@
 # API Reference
 
-## Base URL
+Base URL: `http://localhost:8000/api/v1`
 
-```
-http://localhost:8000/api/v1
-```
+All endpoints return JSON. Errors follow a consistent shape:
 
-Interactive OpenAPI docs at `http://localhost:8000/docs`.
+```json
+{
+  "detail": {
+    "code": "ERROR_CODE",
+    "message": "Human-readable message"
+  }
+}
+```
 
 ---
 
 ## Authentication
 
-### Dashboard Auth (Bearer Token)
+### POST /auth/signup
 
-Management endpoints require a bearer token from signup/login:
+Create a new user.
 
-```http
-Authorization: Bearer <access_token>
-```
-
-### Model Client Auth (API Key)
-
-API keys created through `POST /keys` are for served-model client usage (`OPENAI_API_KEY`). Keys are always stored hashed — the plaintext is returned only once at creation time.
-
-### Public Endpoints (No Auth)
-
-- `GET /health`
-- `GET /models`
-- `GET /models/{model_id}`
-- `POST /auth/signup`
-- `POST /auth/login`
-
----
-
-## Endpoints
-
-### Auth
-
-| Method | Path           | Auth | Description                                |
-| ------ | -------------- | ---- | ------------------------------------------ |
-| `POST` | `/auth/signup` | No   | Create user and return bearer access token |
-| `POST` | `/auth/login`  | No   | Login and return bearer access token       |
-| `GET`  | `/auth/me`     | Yes  | Get current authenticated user             |
-
-### Models
-
-| Method | Path                 | Auth | Description                                                   |
-| ------ | -------------------- | ---- | ------------------------------------------------------------- |
-| `GET`  | `/models`            | No   | List HF models, supports `?category=` filter and `?q=` search |
-| `GET`  | `/models/{model_id}` | No   | Model detail + link to HF model card                          |
-
-### Serve
-
-| Method   | Path          | Auth | Description                     |
-| -------- | ------------- | ---- | ------------------------------- |
-| `POST`   | `/serve`      | Yes  | Pull and serve a model via vLLM |
-| `GET`    | `/serve`      | Yes  | List currently served models    |
-| `DELETE` | `/serve/{id}` | Yes  | Stop a served model             |
-
-### API Keys
-
-| Method   | Path         | Auth | Description                            |
-| -------- | ------------ | ---- | -------------------------------------- |
-| `POST`   | `/keys`      | Yes  | Create a new API key                   |
-| `GET`    | `/keys`      | Yes  | List all keys (prefix + metadata only) |
-| `DELETE` | `/keys/{id}` | Yes  | Revoke a key                           |
-
-### Health
-
-| Method | Path      | Auth | Description              |
-| ------ | --------- | ---- | ------------------------ |
-| `GET`  | `/health` | No   | Service health (no auth) |
-
----
-
-## Response Shapes
-
-### Success
+**Request:**
 
 ```json
 {
-  "data": { ... },
-  "meta": { "page": 1, "total": 42 }
+  "username": "alice",
+  "password": "hunter2"
 }
 ```
 
-### Error
+**Response (201):**
 
 ```json
 {
-  "detail": "Human-readable error message",
-  "code": "MODEL_NOT_FOUND"
+  "id": "uuid",
+  "username": "alice"
 }
 ```
 
-Error codes are defined in `backend/app/utils/error_codes.py`.
+### POST /auth/login
+
+Obtain a JWT access token.
+
+**Request:**
+
+```json
+{
+  "username": "alice",
+  "password": "hunter2"
+}
+```
+
+**Response (200):**
+
+```json
+{
+  "access_token": "eyJ...",
+  "token_type": "bearer"
+}
+```
 
 ---
 
-## POST /serve — Example
+## Models (Public)
+
+### GET /models
+
+List all configured model slots with health status.
+
+**Auth:** None required.
+
+**Response (200):**
 
 ```json
-// Request
-{
-  "model_id": "mistralai/Mistral-7B-Instruct-v0.2",
-  "gpu_type": "cuda"
-}
-
-// Response 202 Accepted
-{
-  "data": {
-    "id": "uuid",
-    "model_id": "mistralai/Mistral-7B-Instruct-v0.2",
-    "status": "pending",
-    "endpoint_url": "http://localhost:8080/v1",
-    "env_snippet": {
-      "OPENAI_API_KEY": "sk-ms_AbCdEfGh",
-      "OPENAI_BASE_URL": "http://localhost:8080/v1"
-    }
+[
+  {
+    "slot": 1,
+    "model_id": "meta-llama/Llama-3.1-8B-Instruct",
+    "display_name": "Llama-3.1-8B-Instruct",
+    "endpoint_url": "http://localhost:8081/v1",
+    "status": "running",
+    "env_snippet": "export OPENAI_BASE_URL=http://localhost:8081/v1"
   }
+]
+```
+
+| Field | Type | Description |
+| ----- | ---- | ----------- |
+| `slot` | int | Slot number (1–4) |
+| `model_id` | string | HuggingFace model ID |
+| `display_name` | string | Short name (last segment of model_id) |
+| `endpoint_url` | string | OpenAI-compatible base URL |
+| `status` | string | `running` or `loading` |
+| `env_snippet` | string | Shell export line for OpenAI SDK |
+
+### GET /models/{slot}
+
+Get a single model slot.
+
+**Auth:** None required.
+
+**Response (200):** Same shape as one item in the list.
+
+**Response (404):**
+
+```json
+{
+  "detail": "Slot not configured"
 }
 ```
 
-Poll `GET /serve/{id}` until `status` becomes `running`.
+---
+
+## Serve (Authenticated)
+
+### GET /serve
+
+List all configured model slots (same data as `/models` but requires auth).
+
+**Auth:** `Authorization: Bearer <token>`
+
+**Response (200):** Same shape as `GET /models`.
+
+### GET /serve/{slot}
+
+Get a single model slot (authenticated).
+
+**Auth:** `Authorization: Bearer <token>`
+
+**Response (200):** Same shape as one item in the list.
+
+**Response (404):**
+
+```json
+{
+  "detail": "Slot not configured"
+}
+```
+
+> **Removed in v0.2.0:** `POST /serve` (deploy model) and `DELETE /serve/{id}` (stop model) no longer exist. Models are configured at deploy time via environment variables.
 
 ---
 
-## Pagination
+## API Keys
 
-List endpoints accept `?page=1&page_size=20`. Default `page_size` is 20, max is 100.
+### GET /keys
+
+List all API keys for the authenticated user.
+
+**Auth:** `Authorization: Bearer <token>`
+
+**Response (200):**
+
+```json
+[
+  {
+    "id": "uuid",
+    "name": "my-key",
+    "prefix": "ms-abc",
+    "created_at": "2025-01-01T00:00:00Z",
+    "last_used_at": null,
+    "is_active": true
+  }
+]
+```
+
+### POST /keys
+
+Create a new API key. The full key is returned only once.
+
+**Auth:** `Authorization: Bearer <token>`
+
+**Request:**
+
+```json
+{
+  "name": "my-key"
+}
+```
+
+**Response (201):**
+
+```json
+{
+  "id": "uuid",
+  "name": "my-key",
+  "prefix": "ms-abc",
+  "key": "ms-abcdef1234567890",
+  "created_at": "2025-01-01T00:00:00Z",
+  "is_active": true
+}
+```
+
+### DELETE /keys/{key_id}
+
+Revoke an API key.
+
+**Auth:** `Authorization: Bearer <token>`
+
+**Response (204):** No content.
 
 ---
 
-## HuggingFace Hub Caching
+## Health
 
-The backend caches HF model list responses. The HF API is not called more than once per 5 minutes for the same query. Cache is stored in-process (or Redis if scaled). See `backend/app/services/huggingface.py` for TTL config.
+### GET /health
+
+**Auth:** None required.
+
+**Response (200):**
+
+```json
+{
+  "status": "healthy"
+}
+```
+
+---
+
+## Error Codes
+
+| Code | HTTP Status | Description |
+| ---- | ----------- | ----------- |
+| `KEY_NOT_FOUND` | 404 | API key does not exist |
+| `INVALID_API_KEY` | 401 | API key is invalid or revoked |
+| `USER_ALREADY_EXISTS` | 409 | Username is taken |
+| `INVALID_CREDENTIALS` | 401 | Wrong username or password |
+| `INVALID_AUTH_TOKEN` | 401 | JWT is expired or malformed |
+
+> **Removed in v0.2.0:** `MODEL_NOT_FOUND`, `MODEL_PULL_ERROR`, `GPU_UNAVAILABLE`, `SERVED_MODEL_NOT_FOUND`, `VLLM_ERROR` — these no longer apply since model lifecycle is managed by Docker Compose, not the backend.

@@ -27,8 +27,8 @@ def create_app() -> FastAPI:
     """Create and configure the FastAPI application."""
     app = FastAPI(
         title="ModelServe",
-        description="Self-hosted GPU model serving platform",
-        version="0.1.0",
+        description="Self-hosted ROCm model serving platform via vLLM",
+        version="0.2.0",
         lifespan=lifespan,
     )
 
@@ -49,15 +49,6 @@ def create_app() -> FastAPI:
     )
 
     # Exception handlers
-    @app.exception_handler(exceptions.ModelNotFoundError)
-    async def model_not_found_handler(
-        request: Request, exc: exceptions.ModelNotFoundError
-    ):
-        return JSONResponse(
-            status_code=404,
-            content={"detail": str(exc), "code": error_codes.MODEL_NOT_FOUND},
-        )
-
     @app.exception_handler(exceptions.InvalidAPIKeyError)
     async def invalid_key_handler(request: Request, exc: exceptions.InvalidAPIKeyError):
         return JSONResponse(
@@ -70,31 +61,6 @@ def create_app() -> FastAPI:
         return JSONResponse(
             status_code=404,
             content={"detail": str(exc), "code": error_codes.KEY_NOT_FOUND},
-        )
-
-    @app.exception_handler(exceptions.ServedModelNotFoundError)
-    async def served_model_not_found_handler(
-        request: Request, exc: exceptions.ServedModelNotFoundError
-    ):
-        return JSONResponse(
-            status_code=404,
-            content={"detail": str(exc), "code": error_codes.SERVED_MODEL_NOT_FOUND},
-        )
-
-    @app.exception_handler(exceptions.GPUUnavailableError)
-    async def gpu_unavailable_handler(
-        request: Request, exc: exceptions.GPUUnavailableError
-    ):
-        return JSONResponse(
-            status_code=503,
-            content={"detail": str(exc), "code": error_codes.GPU_UNAVAILABLE},
-        )
-
-    @app.exception_handler(exceptions.VLLMError)
-    async def vllm_error_handler(request: Request, exc: exceptions.VLLMError):
-        return JSONResponse(
-            status_code=500,
-            content={"detail": str(exc), "code": error_codes.VLLM_ERROR},
         )
 
     @app.exception_handler(exceptions.UserAlreadyExistsError)

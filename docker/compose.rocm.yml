@@ -1,19 +1,121 @@
 # AMD ROCm GPU stack
-# Usage: docker compose -f docker/compose.rocm.yml up --build
 #
-# vLLM containers are NOT defined here — they are spawned dynamically by the
-# backend via the Docker SDK whenever a user requests to serve a model.
-# The backend pulls VLLM_ROCM_IMAGE, VLLM_PORT_START/END, and HF_TOKEN from
-# the environment to configure those containers at runtime.
+# Usage:
+#   # Serve one model:
+#   docker compose -f docker/compose.rocm.yml --profile vllm-1 up --build
 #
-# Prebuilt image: https://docs.vllm.ai/en/stable/deployment/docker/#amd-rocm
+#   # Serve two models:
+#   docker compose -f docker/compose.rocm.yml --profile vllm-1 --profile vllm-2 up --build
+#
+# Required .env variables:
+#   VLLM_MODEL_1, VLLM_MODEL_2, ... (HuggingFace model IDs)
+#   HF_TOKEN (for gated models)
+#
+# First run downloads model weights into the hf_cache volume.
+# Subsequent runs reuse the cache — no re-download.
+#
+# Image: https://hub.docker.com/r/vllm/vllm-openai-rocm/tags
+# Docs:  https://docs.vllm.ai/en/v0.4.1/getting_started/amd-installation.html
 
 include:
   - compose.base.yml
 
+x-vllm-common: &vllm-common
+  image: ${VLLM_ROCM_IMAGE:-vllm/vllm-openai-rocm:latest}
+  ipc: host
+  devices:
+    - /dev/kfd
+    - /dev/dri
+  group_add:
+    - video
+  cap_add:
+    - SYS_PTRACE
+  security_opt:
+    - seccomp=unconfined
+  volumes:
+    - hf_cache:/root/.cache/huggingface
+  restart: unless-stopped
+
 services:
+  # Override backend to set VLLM_HOST to the Docker network hostname
   backend:
     environment:
-      VLLM_GPU_TYPE: rocm
-      # Override the default image tag if you need a specific version, e.g.:
-      # VLLM_ROCM_IMAGE: vllm/vllm-openai-rocm:v0.8.5
+      VLLM_HOST: ${VLLM_HOST:-localhost}
+
+  # --- vLLM model slots (activate via --profile) ---
+
+  vllm-1:
+    <<: *vllm-common
+    profiles: [vllm-1]
+    command:
+      - --model
+      - ${VLLM_MODEL_1}
+      - --device
+      - rocm
+      - --host
+      - "0.0.0.0"
+      - --port
+      - "8080"
+      - --enforce-eager
+    environment:
+      HUGGING_FACE_HUB_TOKEN: ${HF_TOKEN:-}
+      VLLM_API_KEY: ${VLLM_API_KEY:-}
+    ports:
+      - "${VLLM_PORT_1:-8081}:8080"
+
+  vllm-2:
+    <<: *vllm-common
+    profiles: [vllm-2]
+    command:
+      - --model
+      - ${VLLM_MODEL_2}
+      - --device
+      - rocm
+      - --host
+      - "0.0.0.0"
+      - --port
+      - "8080"
+      - --enforce-eager
+    environment:
+      HUGGING_FACE_HUB_TOKEN: ${HF_TOKEN:-}
+      VLLM_API_KEY: ${VLLM_API_KEY:-}
+    ports:
+      - "${VLLM_PORT_2:-8082}:8080"
+
+  vllm-3:
+    <<: *vllm-common
+    profiles: [vllm-3]
+    command:
+      - --model
+      - ${VLLM_MODEL_3}
+      - --device
+      - rocm
+      - --host
+      - "0.0.0.0"
+      - --port
+      - "8080"
+      - --enforce-eager
+    environment:
+      HUGGING_FACE_HUB_TOKEN: ${HF_TOKEN:-}
+      VLLM_API_KEY: ${VLLM_API_KEY:-}
+    ports:
+      - "${VLLM_PORT_3:-8083}:8080"
+
+  vllm-4:
+    <<: *vllm-common
+    profiles: [vllm-4]
+    command:
+      - --model
+      - ${VLLM_MODEL_4}
+      - --device
+      - rocm
+      - --host
+      - "0.0.0.0"
+      - --port
+      - "8080"
+      - --enforce-eager
+    environment:
+      HUGGING_FACE_HUB_TOKEN: ${HF_TOKEN:-}
+      VLLM_API_KEY: ${VLLM_API_KEY:-}
+    ports:
+      - "${VLLM_PORT_4:-8084}:8080"

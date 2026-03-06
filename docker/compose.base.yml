@@ -1,4 +1,4 @@
-# Shared service definitions — extended by compose.cuda.yml and compose.rocm.yml
+# Shared service definitions — extended by compose.rocm.yml and compose.local.yml
 
 services:
   db:
@@ -18,21 +18,11 @@ services:
       context: ../backend
       dockerfile: ../docker/backend.Dockerfile
     env_file: ../.env
-    environment:
-      # Allows the backend container to reach vLLM containers whose ports are
-      # published on the Docker host. Without this, 'localhost' inside the
-      # backend container resolves to the container itself, not the host.
-      VLLM_HOST: host.docker.internal
-    # Map the Docker host gateway so host.docker.internal resolves on Linux.
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
     ports:
       - "8000:8000"
     depends_on:
       db:
         condition: service_healthy
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
 
   frontend:
     build:

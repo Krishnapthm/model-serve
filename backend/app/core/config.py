@@ -5,15 +5,13 @@ import json
 from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+MAX_VLLM_SLOTS = 4
+
 
 class Settings(BaseSettings):
     """Application configuration loaded from environment variables."""
 
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8")
-
-    # HuggingFace
-    hf_token: str = ""
-    hf_max_models: int = 5000
 
     # Database
     database_url: str = (
@@ -24,17 +22,30 @@ class Settings(BaseSettings):
     secret_key: str = "change-me-in-production-min-32-chars!!"
     access_token_expire_minutes: int = 1440
 
-    # vLLM
+    # vLLM — model slots (max 4). Set in .env to enable each slot.
+    vllm_model_1: str = ""
+    vllm_model_2: str = ""
+    vllm_model_3: str = ""
+    vllm_model_4: str = ""
+
+    # Host used to construct external endpoint URLs for served models.
+    # Inside Compose this is the Docker host; outside it defaults to localhost.
     vllm_host: str = "localhost"
-    # Port range used when allocating a port for a new vLLM container.
-    # Each concurrently-served model gets its own port from this range.
-    vllm_port_start: int = 8080
-    vllm_port_end: int = 8180
-    # GPU backend for spawned vLLM containers — always rocm for this deployment.
-    vllm_gpu_type: str = "rocm"
-    # Official prebuilt vLLM image for AMD ROCm.
-    # See: https://docs.vllm.ai/en/stable/deployment/docker/#amd-rocm
+
+    # First external port for vLLM slots.  Slot N listens on
+    # ``vllm_base_port + (N - 1)`` e.g. 8081, 8082, 8083, 8084.
+    vllm_base_port: int = 8081
+
+    # Optional shared API key passed to every vLLM instance via ``--api-key``.
+    # Clients must send this as ``Authorization: Bearer <key>``.
+    vllm_api_key: str = ""
+
+    # Official vLLM ROCm image.
+    # https://hub.docker.com/r/vllm/vllm-openai-rocm/tags
     vllm_rocm_image: str = "vllm/vllm-openai-rocm:latest"
+
+    # HuggingFace token — used by vLLM containers to pull gated models.
+    hf_token: str = ""
 
     # App
     api_v1_prefix: str = "/api/v1"
@@ -67,3 +78,27 @@ class Settings(BaseSettings):
             return [origin.strip() for origin in raw.split(",") if origin.strip()]
 
         return value
+
+    def configured_models(self) -> list[dict[str, str | int]]:
+        """Return the list of configured vLLM model slots.
+
+        Each entry contains ``slot``, ``model_id``, ``display_name``, and
+        ``endpoint_url``.  Only slots with a non-empty model ID are returned.
+        """
+        models: list[dict[str, str | int]] = []
+        for i in range(1, MAX_VLLM_SLOTS + 1):
+            model_id: str = getattr(self, f"vllm_model_{i}", "")
+            if not model_id:
+                continue
+            port = self.vllm_base_port + (i - 1)
+            models.append(
+                {
+                    "slot": i,
+                    "model_id": model_id,
+                    "display_name": (
+                        model_id.split("/")[-1] if "/" in model_id else model_id
+                    ),
+                    "endpoint_url": f"http://{self.vllm_host}:{port}/v1",
+                }
+            )
+        return models

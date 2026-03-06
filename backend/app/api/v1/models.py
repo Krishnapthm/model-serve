@@ -1,36 +1,29 @@
-"""Models router — browse HuggingFace models."""
+"""Models router — list configured vLLM models (public)."""
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, HTTPException
 
-from app.api.deps import get_hf_service
-from app.services.huggingface import HuggingFaceService
+from app.api.deps import get_vllm_manager
+from app.services.vllm_manager import VLLMManager
 
 router = APIRouter()
 
 
 @router.get("/models")
 async def list_models(
-    category: str | None = Query(None, description="Filter by pipeline tag"),
-    q: str | None = Query(None, description="Search query"),
-    page: int = Query(1, ge=1),
-    page_size: int = Query(20, ge=1, le=100),
-    hf_svc: HuggingFaceService = Depends(get_hf_service),
+    vllm: VLLMManager = Depends(get_vllm_manager),
 ):
-    """List HuggingFace models with optional category filter and search."""
-    models, total = await hf_svc.list_models(
-        category=category, query=q, page=page, page_size=page_size
-    )
-    return {
-        "data": [m.model_dump() for m in models],
-        "meta": {"page": page, "page_size": page_size, "total": total},
-    }
+    """List configured models and their live health status (public)."""
+    models = await vllm.list_models()
+    return {"data": models}
 
 
-@router.get("/models/{model_id:path}")
+@router.get("/models/{slot}")
 async def get_model(
-    model_id: str,
-    hf_svc: HuggingFaceService = Depends(get_hf_service),
+    slot: int,
+    vllm: VLLMManager = Depends(get_vllm_manager),
 ):
-    """Get detailed info for a single model."""
-    model = await hf_svc.get_model(model_id)
-    return {"data": model.model_dump()}
+    """Get a single model slot by number."""
+    model = await vllm.get_model(slot)
+    if model is None:
+        raise HTTPException(status_code=404, detail=f"Model slot {slot} is not configured")
+    return {"data": model}

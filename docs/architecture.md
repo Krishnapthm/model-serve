@@ -2,34 +2,32 @@
 
 ## What ModelServe Does
 
-ModelServe lets users on a GPU VM:
+ModelServe lets users on a ROCm GPU machine:
 
-1. Create an account / log in (email + password)
-2. Browse available HuggingFace models (categorized by type)
-3. Click **Serve** → backend pulls the model and launches a vLLM process
-4. Get an OpenAI-compatible endpoint immediately
-5. Use a generated API key (`OPENAI_API_KEY` + `OPENAI_BASE_URL`) in any OpenAI SDK client
+1. Declare which HuggingFace models to serve via environment variables
+2. Run `docker compose up` — vLLM downloads and serves each model
+3. Get OpenAI-compatible endpoints immediately
+4. Manage API keys and users through the dashboard
 
 ---
 
 ## Services
 
 ```text
-┌─────────────────────────────────────────────────────────────┐
-│  Docker Compose (cuda or rocm)                              │
-│                                                             │
-│  ┌──────────────┐   ┌──────────────┐   ┌────────────────┐  │
-│  │   Frontend   │   │   Backend    │   │   PostgreSQL   │  │
-│  │  Vite/React  │──▶│   FastAPI    │──▶│   (postgres)   │  │
-│  │  :3000       │   │  :8000       │   │   :5432        │  │
-│  └──────────────┘   └──────┬───────┘   └────────────────┘  │
-│                            │                                │
-│                     ┌──────▼───────┐                        │
-│                     │  vLLM sidecar│                        │
-│                     │  (spawned    │                        │
-│                     │   per model) │                        │
-│                     └──────────────┘                        │
-└─────────────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────────┐
+│  Docker Compose (ROCm)                                           │
+│                                                                  │
+│  ┌──────────────┐   ┌──────────────┐   ┌────────────────┐       │
+│  │   Frontend   │   │   Backend    │   │   PostgreSQL   │       │
+│  │  Vite/React  │──▶│   FastAPI    │──▶│   (postgres)   │       │
+│  │  :3000       │   │  :8000       │   │   :5432        │       │
+│  └──────────────┘   └──────────────┘   └────────────────┘       │
+│                                                                  │
+│  ┌──────────────┐   ┌──────────────┐                             │
+│  │   vLLM-1     │   │   vLLM-2     │   (up to 4 slots)          │
+│  │  :8081       │   │  :8082       │                             │
+│  └──────────────┘   └──────────────┘                             │
+└──────────────────────────────────────────────────────────────────┘
 ```
 
 ---
@@ -48,14 +46,16 @@ ModelServe lets users on a GPU VM:
 │   │   ├── api/
 │   │   │   ├── deps.py           # All FastAPI Depends() providers
 │   │   │   └── v1/
-│   │   │       ├── models.py     # /models router
-│   │   │       ├── serve.py      # /serve router
-│   │   │       └── keys.py       # /keys router
+│   │   │       ├── models.py     # /models router (public model list)
+│   │   │       ├── serve.py      # /serve router (authed model list)
+│   │   │       ├── keys.py       # /keys router
+│   │   │       ├── auth.py       # /auth router
+│   │   │       └── health.py     # /health router
 │   │   ├── services/
-│   │   │   ├── huggingface.py    # HF Hub API client
-│   │   │   ├── vllm_manager.py   # vLLM process lifecycle
-│   │   │   └── api_key.py        # Key CRUD logic
-│   │   ├── models/               # SQLAlchemy ORM models
+│   │   │   ├── vllm_manager.py   # Config reader + health checker
+│   │   │   ├── api_key.py        # Key CRUD logic
+│   │   │   └── auth.py           # User auth logic
+│   │   ├── models/               # SQLAlchemy ORM models (users, api_keys)
 │   │   ├── schemas/              # Pydantic request/response schemas
 │   │   └── utils/                # Pure helpers (no side effects)
 │   ├── alembic/                  # DB migrations
@@ -71,15 +71,14 @@ ModelServe lets users on a GPU VM:
 │   │   ├── pages/                # Route-level components
 │   │   ├── hooks/                # Custom hooks + TanStack Query hooks
 │   │   ├── lib/
-│   │   │   ├── api.ts            # axios/fetch client, base URL config
+│   │   │   ├── api.ts            # API client, base URL config
 │   │   │   └── utils.ts          # cn(), formatters
 │   │   └── types/                # Shared TypeScript types
 │   ├── components.json           # shadcn config
 │   └── vite.config.ts
 │
 ├── docker/
-│   ├── compose.cuda.yml          # NVIDIA GPU stack
-│   ├── compose.rocm.yml          # AMD GPU stack
+│   ├── compose.rocm.yml          # AMD ROCm GPU stack
 │   ├── compose.local.yml         # Local dev (no GPU)
 │   ├── compose.base.yml          # Shared service config
 │   ├── backend.Dockerfile
@@ -90,41 +89,35 @@ ModelServe lets users on a GPU VM:
 │   ├── deployment.md             # Docker, compose, env vars
 │   └── api.md                    # API endpoints, auth, response shapes
 │
-├── .github/
-│   ├── copilot-instructions.md   # Always-on agent instructions
-│   └── instructions/             # File-scoped agent instructions
-│       ├── backend.instructions.md
-│       ├── frontend.instructions.md
-│       ├── docker.instructions.md
-│       └── documentation.instructions.md
-│
 └── README.md                     # User-facing quickstart
 ```
 
 ---
 
-## Data Flow: Serving a Model
+## Data Flow
 
 ```text
-User clicks "Serve"
-  → POST /api/v1/serve  { model_id, hf_token }
-  → vllm_manager.py: docker run vllm/vllm-openai ... --model {model_id}
-  → Returns { endpoint_url, api_key }
-  → Frontend displays env var snippet for user to copy
+Admin sets VLLM_MODEL_1=... in .env
+  → docker compose --profile vllm-1 up
+  → vLLM container pulls model (first run) or loads from cache (subsequent)
+  → Backend reads VLLM_MODEL_1 from env, probes http://vllm-1:8080/health
+  → GET /models returns { model_id, status: running/loading, endpoint_url }
+  → User creates API key via POST /keys
+  → User copies endpoint_url + (optional) VLLM_API_KEY
+  → User sends inference requests directly to vLLM endpoint
 ```
 
 ---
 
-## Model Categories
+## What Changed from v0.1.0
 
-Models are categorized by HuggingFace pipeline tag:
-
-| HF Pipeline Tag                | Display Label    | Badge Color |
-| ------------------------------ | ---------------- | ----------- |
-| `text-generation`              | LLM              | blue        |
-| `feature-extraction`           | Text Embedding   | purple      |
-| `text-to-image`                | Image Generation | pink        |
-| `text-to-video`                | Video Generation | orange      |
-| `automatic-speech-recognition` | Speech-to-Text   | green       |
-| `image-to-text`                | Vision-Language  | cyan        |
-| custom                         | Custom           | gray        |
+| v0.1.0 (old)                          | v0.2.0 (current)                        |
+| ------------------------------------- | ---------------------------------------- |
+| Docker SDK spawns vLLM containers     | Docker Compose defines vLLM services     |
+| Models selected from HuggingFace UI   | Models declared via env vars at deploy   |
+| `served_models` table tracks state    | Model state is ephemeral (health checks) |
+| CUDA + ROCm support planned           | ROCm only (CUDA to be added later)       |
+| Dynamic port allocation               | Fixed ports per slot (8081–8084)          |
+| Docker socket mounted in backend      | No Docker socket needed                  |
+| `docker` Python package required      | Removed — only `httpx` for health checks |
+| HuggingFace API browsing              | Removed — models are pre-declared        |

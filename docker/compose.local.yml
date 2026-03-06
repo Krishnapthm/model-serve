@@ -1,8 +1,8 @@
 # Local development stack — no GPU required
 # Usage: docker compose -f docker/compose.local.yml up --build
 #
-# Use this to test the UI, model browsing, API keys, etc.
-# Model serving (vLLM) is excluded — it requires a GPU.
+# Use this to test the dashboard, API keys, auth, etc.
+# Model serving (vLLM) is excluded — it requires a ROCm GPU.
 
 include:
   - compose.base.yml

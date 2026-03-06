@@ -1,14 +1,14 @@
 # ModelServe
 
-A self-hosted GPU model serving platform. Browse HuggingFace models, click **Serve**, and get an OpenAI-compatible endpoint — no infra knowledge required.
+A self-hosted model serving platform for AMD ROCm GPUs. Declare the models you want to serve, run `docker compose up`, and get OpenAI-compatible endpoints — no infra knowledge required.
 
 ## Quick Start
 
 ### Prerequisites
 
 - Docker & Docker Compose
-- GPU with NVIDIA (CUDA) or AMD (ROCm) drivers
-- [HuggingFace token](https://huggingface.co/settings/tokens)
+- AMD GPU with ROCm drivers
+- [HuggingFace token](https://huggingface.co/settings/tokens) (for gated models)
 
 ### Setup
 
@@ -18,17 +18,23 @@ git clone https://github.com/Krishnapthm/model-serve.git && cd model-serve
 
 # Configure environment
 cp .env.example .env
-# Edit .env — set HF_TOKEN, SECRET_KEY, POSTGRES_PASSWORD (and CORS_* as needed)
+# Edit .env — set VLLM_MODEL_1, HF_TOKEN, SECRET_KEY, POSTGRES_PASSWORD
 
-# Start (NVIDIA GPU)
-docker compose -f docker/compose.cuda.yml up --build
+# Start with one model
+docker compose -f docker/compose.rocm.yml --profile vllm-1 up --build
 
-# Start (AMD GPU)
-docker compose -f docker/compose.rocm.yml up --build
+# Start with two models
+docker compose -f docker/compose.rocm.yml --profile vllm-1 --profile vllm-2 up --build
 
 # Local development (frontend HMR, no GPU/vLLM)
 docker compose -f docker/compose.local.yml up --build
 ```
+
+### First Run vs Subsequent Runs
+
+The **first run** downloads the model weights from HuggingFace into a Docker volume (`hf_cache`). This can take a while depending on model size and network speed.
+
+**Subsequent runs** reuse the cached weights — startup is fast. The cache persists across `docker compose down` / `docker compose up` cycles. Only `docker volume rm` removes it.
 
 ### Access
 
@@ -36,20 +42,40 @@ docker compose -f docker/compose.local.yml up --build
 | ----------- | -------------------------------------------------------- |
 | Frontend    | [http://localhost:3000](http://localhost:3000)           |
 | Backend API | [http://localhost:8000/docs](http://localhost:8000/docs) |
+| vLLM slot 1 | http://localhost:8081/v1                                |
+| vLLM slot 2 | http://localhost:8082/v1                                |
 
-### Deploying on changing public IPs (GPU VPC)
+### Using the Models
 
-- Frontend API calls auto-resolve to the current browser host on port `8000`, so you do not need to hardcode a fixed public IP.
-- Keep `VITE_API_BASE_URL` empty in `.env` unless you intentionally want a custom backend URL.
-- Default CORS in `.env.example` is `CORS_ORIGINS=*` (with `CORS_ALLOW_CREDENTIALS=false`) to avoid CORS breaks when the public origin changes.
-- For stricter production security, replace `CORS_ORIGINS=*` with a comma-separated allowlist of your exact frontend origins.
+Once a model is running (`status: running` in the API), use it like any OpenAI endpoint:
+
+```bash
+curl http://localhost:8081/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -d '{"model": "mistralai/Mistral-7B-Instruct-v0.3", "messages": [{"role": "user", "content": "Hello!"}]}'
+```
+
+Or with the OpenAI Python SDK:
+
+```python
+from openai import OpenAI
+
+client = OpenAI(
+    base_url="http://localhost:8081/v1",
+    api_key="your-vllm-api-key",  # or "dummy" if VLLM_API_KEY is not set
+)
+response = client.chat.completions.create(
+    model="mistralai/Mistral-7B-Instruct-v0.3",
+    messages=[{"role": "user", "content": "Hello!"}],
+)
+```
 
 ## How It Works
 
-1. **Browse** HuggingFace models by category (LLM, Embedding, Image Gen, etc.)
-2. **Serve** a model — vLLM pulls and runs it on your GPU
-3. **Copy** the `OPENAI_API_KEY` + `OPENAI_BASE_URL` env vars
-4. **Use** in any OpenAI SDK client
+1. **Configure** model IDs in `.env` (`VLLM_MODEL_1`, `VLLM_MODEL_2`, etc.)
+2. **Start** with `docker compose --profile vllm-1 up`
+3. **Wait** — first run downloads the model, subsequent runs use cache
+4. **Use** the OpenAI-compatible endpoint directly
 
 ## Project Structure
 
@@ -88,36 +114,33 @@ Create an account with `POST /api/v1/auth/signup` (or log in with `POST /api/v1/
 
 `Authorization: Bearer <access_token>`
 
-Public endpoints: `GET /api/v1/health`, `GET /api/v1/models`, and `GET /api/v1/models/{model_id}`.
-
-| Method   | Path                  | Description        |
-| -------- | --------------------- | ------------------ |
-| `GET`    | `/api/v1/health`      | Health check       |
-| `POST`   | `/api/v1/auth/signup` | Signup + token     |
-| `POST`   | `/api/v1/auth/login`  | Login + token      |
-| `GET`    | `/api/v1/auth/me`     | Current user       |
-| `GET`    | `/api/v1/models`      | List HF models     |
-| `GET`    | `/api/v1/models/{id}` | Model detail       |
-| `POST`   | `/api/v1/serve`       | Serve a model      |
-| `GET`    | `/api/v1/serve`       | List served models |
-| `DELETE` | `/api/v1/serve/{id}`  | Stop a model       |
-| `POST`   | `/api/v1/keys`        | Create API key     |
-| `GET`    | `/api/v1/keys`        | List keys          |
-| `DELETE` | `/api/v1/keys/{id}`   | Revoke key         |
+| Method   | Path                  | Auth | Description               |
+| -------- | --------------------- | ---- | ------------------------- |
+| `GET`    | `/api/v1/health`      | No   | Health check              |
+| `POST`   | `/api/v1/auth/signup` | No   | Signup + token            |
+| `POST`   | `/api/v1/auth/login`  | No   | Login + token             |
+| `GET`    | `/api/v1/auth/me`     | Yes  | Current user              |
+| `GET`    | `/api/v1/models`      | No   | List configured models    |
+| `GET`    | `/api/v1/models/{n}`  | No   | Model slot detail         |
+| `GET`    | `/api/v1/serve`       | Yes  | List models (authed)      |
+| `GET`    | `/api/v1/serve/{n}`   | Yes  | Model slot detail (authed)|
+| `POST`   | `/api/v1/keys`        | Yes  | Create API key            |
+| `GET`    | `/api/v1/keys`        | Yes  | List keys                 |
+| `DELETE` | `/api/v1/keys/{id}`   | Yes  | Revoke key                |
 
 Full API docs at `http://localhost:8000/docs` when running.
 
 ## Stack
 
-FastAPI · PostgreSQL · React · Vite · shadcn/ui · TanStack Query · vLLM · Docker Compose
+FastAPI · PostgreSQL · React · Vite · shadcn/ui · TanStack Query · vLLM (ROCm) · Docker Compose
 
 ## Documentation
 
-| Doc                                  | Description                                   |
-| ------------------------------------ | --------------------------------------------- |
-| [Architecture](docs/architecture.md) | System overview, service diagram, data flow   |
-| [Deployment](docs/deployment.md)     | Docker Compose, env vars, GPU VPC setup       |
-| [API Reference](docs/api.md)         | Endpoints, auth, response shapes              |
-| [Backend](backend/README.md)         | FastAPI setup, DB schema, migrations, testing |
-| [Frontend](frontend/README.md)       | React setup, component library, auth flow     |
-| [Docker](docker/README.md)           | Compose variants, Dockerfiles, ports          |
+| Doc                                  | Description                                  |
+| ------------------------------------ | -------------------------------------------- |
+| [Architecture](docs/architecture.md) | System overview, service diagram, data flow  |
+| [Deployment](docs/deployment.md)     | Docker Compose, env vars, GPU setup          |
+| [API Reference](docs/api.md)        | Endpoints, auth, response shapes             |
+| [Backend](backend/README.md)         | FastAPI setup, DB schema, migrations, testing|
+| [Frontend](frontend/README.md)       | React setup, component library, auth flow    |
+| [Docker](docker/README.md)           | Compose variants, Dockerfiles, ports         |

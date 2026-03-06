@@ -1,7 +1,7 @@
 [project]
 name = "modelserve-backend"
-version = "0.1.0"
-description = "ModelServe — self-hosted GPU model serving backend"
+version = "0.2.0"
+description = "ModelServe — self-hosted ROCm model serving backend"
 requires-python = ">=3.12"
 dependencies = [
     "fastapi>=0.115.0",
@@ -13,7 +13,6 @@ dependencies = [
     "httpx>=0.28.0",
     "bcrypt>=4.2.0",
     "PyJWT>=2.10.1",
-    "docker>=7.1.0",
 ]
 
 [project.optional-dependencies]

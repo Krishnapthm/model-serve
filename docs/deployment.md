@@ -2,132 +2,204 @@
 
 ## Prerequisites
 
-- Docker & Docker Compose
-- GPU with NVIDIA (CUDA) or AMD (ROCm) drivers
-- [HuggingFace token](https://huggingface.co/settings/tokens)
+| Requirement | Minimum |
+| ----------- | ------- |
+| Docker Engine | 24+ |
+| Docker Compose | v2.20+ (profiles support) |
+| AMD GPU | gfx900+ (Vega, RDNA, CDNA) |
+| ROCm driver | 6.x |
+| Host RAM | 16 GB (model-dependent) |
+| VRAM | Depends on model size |
 
 ---
 
-## Compose Variants
-
-| File                       | GPU Target    | Runtime                         |
-| -------------------------- | ------------- | ------------------------------- |
-| `docker/compose.cuda.yml`  | NVIDIA (CUDA) | `nvidia` container runtime      |
-| `docker/compose.rocm.yml`  | AMD (ROCm)    | `/dev/kfd` + `/dev/dri` devices |
-| `docker/compose.local.yml` | None          | DB + backend + frontend HMR     |
-
-Both GPU files share the same service topology — only the vLLM image tag and GPU device config differ. All shared config is in `docker/compose.base.yml` and extended via `extends`.
-
----
-
-## Quickstart
+## Quick Start
 
 ```bash
-# Clone and enter repo
-git clone https://github.com/your-org/modelserve && cd modelserve
+git clone https://github.com/<org>/model-serve.git
+cd model-serve
 
-# Configure environment
+# Copy and edit environment
 cp .env.example .env
-# Edit .env — set HF_TOKEN, SECRET_KEY, POSTGRES_PASSWORD
-
-# NVIDIA GPU
-docker compose -f docker/compose.cuda.yml up --build
-
-# AMD GPU
-docker compose -f docker/compose.rocm.yml up --build
-
-# Local development (frontend HMR, no GPU/vLLM)
-docker compose -f docker/compose.local.yml up --build
+# At minimum set: VLLM_MODEL_1, SECRET_KEY, POSTGRES_PASSWORD
 ```
 
----
+Edit `.env`:
 
-## Environment Variables
+```dotenv
+# Required
+SECRET_KEY=change-me-to-random-string
+POSTGRES_PASSWORD=change-me
+VLLM_MODEL_1=meta-llama/Llama-3.1-8B-Instruct
 
-Create `.env` from `.env.example`. Required vars:
+# Optional — serve up to 4 models
+VLLM_MODEL_2=mistralai/Mistral-7B-Instruct-v0.3
+
+# Optional — protect vLLM endpoints
+VLLM_API_KEY=your-key-here
+
+# HuggingFace token — required for gated models
+HF_TOKEN=hf_xxxxx
+```
+
+Start the stack:
 
 ```bash
-# HuggingFace
-HF_TOKEN=hf_...
+# Serve model 1 only
+docker compose -f docker/compose.base.yml \
+               -f docker/compose.rocm.yml \
+               --profile vllm-1 up -d
 
-# Database
-POSTGRES_USER=modelserve
-POSTGRES_PASSWORD=changeme
-POSTGRES_DB=modelserve
-DATABASE_URL=postgresql+asyncpg://modelserve:changeme@db:5432/modelserve
-
-# Security
-SECRET_KEY=your-random-secret-key-min-32-chars
-
-# CORS (dynamic VPC/public IP friendly defaults)
-CORS_ORIGINS=*
-CORS_ALLOW_CREDENTIALS=false
-CORS_ORIGIN_REGEX=
-
-# vLLM
-VLLM_HOST=vllm
-VLLM_PORT=8080
-
-# Frontend (optional override; leave empty for dynamic same-host behavior)
-VITE_API_BASE_URL=
+# Serve models 1 and 2
+docker compose -f docker/compose.base.yml \
+               -f docker/compose.rocm.yml \
+               --profile vllm-1 --profile vllm-2 up -d
 ```
 
-### Environment Variables Reference
+---
 
-| Variable                 | Service       | Description                                      |
-| ------------------------ | ------------- | ------------------------------------------------ |
-| `HF_TOKEN`               | backend       | HuggingFace read token                           |
-| `DATABASE_URL`           | backend       | `postgresql+asyncpg://...`                       |
-| `SECRET_KEY`             | backend       | Used for API key signing                         |
-| `CORS_ORIGINS`           | backend       | CORS allowlist (`*` or CSV list)                 |
-| `CORS_ALLOW_CREDENTIALS` | backend       | CORS credentials flag (must be `false` with `*`) |
-| `CORS_ORIGIN_REGEX`      | backend       | Optional CORS regex matcher                      |
-| `VLLM_HOST`              | backend       | vLLM sidecar hostname                            |
-| `VITE_API_BASE_URL`      | frontend      | Optional backend base URL override               |
-| `OPENAI_API_KEY`         | client (user) | Generated API key                                |
-| `OPENAI_BASE_URL`        | client (user) | Served model endpoint                            |
+## First Run vs Subsequent Runs
+
+### First run
+
+vLLM downloads the model from HuggingFace Hub. This can take minutes to hours depending on model size and bandwidth.
+
+```text
+vllm-1  | Downloading model 'meta-llama/Llama-3.1-8B-Instruct'...
+vllm-1  | [========>                     ] 32%  ETA 5:23
+```
+
+The downloaded weights are cached in the Docker volume `hf-cache`.
+
+### Subsequent runs
+
+vLLM finds the cached weights and starts serving in seconds:
+
+```text
+vllm-1  | Loading cached model from /root/.cache/huggingface/...
+vllm-1  | INFO:     Uvicorn running on http://0.0.0.0:8080
+```
+
+**Do not delete the `hf-cache` volume** unless you want to re-download all models.
+
+```bash
+# View cache volume
+docker volume inspect model-serve_hf-cache
+
+# Force re-download (destructive)
+docker compose down -v   # removes ALL volumes including database
+```
 
 ---
 
-## Ports
+## Environment Reference
 
-| Service    | Port | Description                  |
-| ---------- | ---- | ---------------------------- |
-| Frontend   | 3000 | React app                    |
-| Backend    | 8000 | FastAPI (OpenAPI at `/docs`) |
-| vLLM       | 8080 | OpenAI-compatible endpoint   |
-| PostgreSQL | 5432 | Internal only (not exposed)  |
+### Core
+
+| Variable | Required | Default | Description |
+| -------- | -------- | ------- | ----------- |
+| `SECRET_KEY` | yes | — | JWT signing key |
+| `POSTGRES_PASSWORD` | yes | — | Database password |
+| `DATABASE_URL` | no | built from PG vars | Full async connection string |
+
+### Model Slots
+
+| Variable | Required | Default | Description |
+| -------- | -------- | ------- | ----------- |
+| `VLLM_MODEL_1` | yes | — | HuggingFace model ID for slot 1 |
+| `VLLM_MODEL_2` | no | — | HuggingFace model ID for slot 2 |
+| `VLLM_MODEL_3` | no | — | HuggingFace model ID for slot 3 |
+| `VLLM_MODEL_4` | no | — | HuggingFace model ID for slot 4 |
+
+### vLLM
+
+| Variable | Required | Default | Description |
+| -------- | -------- | ------- | ----------- |
+| `VLLM_HOST` | no | `localhost` | Hostname for vLLM services |
+| `VLLM_BASE_PORT` | no | `8081` | Port of slot 1 (slots increment by 1) |
+| `VLLM_API_KEY` | no | — | Bearer token for vLLM endpoints |
+| `VLLM_ROCM_IMAGE` | no | `vllm/vllm-openai-rocm:latest` | vLLM Docker image |
+| `HF_TOKEN` | no | — | HuggingFace token for gated models |
+| `VLLM_PORT_1`–`VLLM_PORT_4` | no | 8081–8084 | Override individual slot ports |
+
+### Application
+
+| Variable | Required | Default | Description |
+| -------- | -------- | ------- | ----------- |
+| `APP_NAME` | no | `ModelServe` | Display name |
+| `API_V1_PREFIX` | no | `/api/v1` | API route prefix |
+| `BACKEND_CORS_ORIGINS` | no | `["*"]` | Allowed CORS origins |
 
 ---
 
-## Deploying on Changing Public IPs (GPU VPC)
+## Profiles
 
-- Frontend API calls auto-resolve to the current browser host on port `8000`, so you do not need to hardcode a fixed public IP.
-- Keep `VITE_API_BASE_URL` empty in `.env` unless you intentionally want a custom backend URL.
-- Default CORS in `.env.example` is `CORS_ORIGINS=*` (with `CORS_ALLOW_CREDENTIALS=false`) to avoid CORS breaks when the public origin changes.
-- For stricter production security, replace `CORS_ORIGINS=*` with a comma-separated allowlist of your exact frontend origins.
+Each vLLM slot is behind a Docker Compose profile. Only activated slots consume GPU resources.
 
----
-
-## Database Initialization
-
-The DB schema is applied automatically on `docker compose up` via Alembic `upgrade head` in the backend container entrypoint. There is no manual migration step for users.
+| Profile | Service | Port | Env Var |
+| ------- | ------- | ---- | ------- |
+| `vllm-1` | vllm-1 | 8081 | `VLLM_MODEL_1` |
+| `vllm-2` | vllm-2 | 8082 | `VLLM_MODEL_2` |
+| `vllm-3` | vllm-3 | 8083 | `VLLM_MODEL_3` |
+| `vllm-4` | vllm-4 | 8084 | `VLLM_MODEL_4` |
 
 ---
 
-## Custom vLLM Build
+## Production Considerations
 
-If you have a custom vLLM image (e.g. with custom kernels or quantization support):
+### GPU Isolation
 
-1. Build your image: `docker build -t my-vllm:latest ./custom-vllm`
-2. In your compose file, replace the `image:` field:
+Each vLLM service gets `/dev/kfd` and `/dev/dri`. For multi-GPU systems, use `HIP_VISIBLE_DEVICES` to pin services to specific GPUs:
 
-   ```yaml
-   vllm:
-     image: my-vllm:latest
-   ```
+```yaml
+# In a custom override file
+services:
+  vllm-1:
+    environment:
+      HIP_VISIBLE_DEVICES: "0"
+  vllm-2:
+    environment:
+      HIP_VISIBLE_DEVICES: "1"
+```
 
-3. All other config (devices, volumes, env) stays the same.
-4. Document any extra env vars your image requires in `.env.example`.
+### Monitoring
 
-The backend's `vllm_manager.py` service spawns vLLM via the Docker socket using the configured image name — no other changes needed.
+Monitor vLLM directly:
+
+```bash
+# Health
+curl http://localhost:8081/health
+
+# Metrics (Prometheus format)
+curl http://localhost:8081/metrics
+```
+
+### Reverse Proxy
+
+Place a reverse proxy in front for TLS termination:
+
+```text
+Client → nginx (443) → backend (8000)
+                      → vllm-1 (8081)
+                      → vllm-2 (8082)
+```
+
+### Backup
+
+Back up the PostgreSQL volume regularly. The `hf-cache` volume is a cache and can be regenerated (but re-download takes time).
+
+```bash
+docker compose exec postgres pg_dump -U modelserve modelserve > backup.sql
+```
+
+---
+
+## Troubleshooting
+
+| Symptom | Cause | Fix |
+| ------- | ----- | --- |
+| `Permission denied: /dev/kfd` | ROCm not installed or user not in `render`/`video` groups | `sudo usermod -aG render,video $USER` and re-login |
+| vLLM OOM during model load | Not enough VRAM | Use a smaller model or enable quantization via vLLM args |
+| Model download hangs | Gated model without token | Set `HF_TOKEN` in `.env` |
+| Backend shows all models as `loading` | vLLM still downloading or crashed | Check `docker compose logs vllm-1` |
+| Port conflict on 8081 | Another service on that port | Change `VLLM_PORT_1` in `.env` |

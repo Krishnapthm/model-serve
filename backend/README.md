@@ -1,6 +1,6 @@
 # Backend
 
-FastAPI application serving the ModelServe API. Manages user auth, HuggingFace model discovery, vLLM process lifecycle, and API key generation.
+FastAPI application serving the ModelServe API. Manages user auth, API key generation, and reads vLLM model configuration from environment.
 
 ## Stack
 
@@ -8,6 +8,7 @@ FastAPI application serving the ModelServe API. Manages user auth, HuggingFace m
 - **SQLAlchemy 2.x** async ORM (`asyncpg` driver)
 - **Alembic** for database migrations
 - **Pydantic v2** for request/response validation
+- **httpx** for vLLM health checks
 - **uv** for dependency management
 
 ---
@@ -53,24 +54,21 @@ backend/
 │   │   └── v1/
 │   │       ├── auth.py       # /auth router (signup, login, me)
 │   │       ├── health.py     # /health router
-│   │       ├── models.py     # /models router
-│   │       ├── serve.py      # /serve router
+│   │       ├── models.py     # /models router (configured model slots)
+│   │       ├── serve.py      # /serve router (authed model listing)
 │   │       └── keys.py       # /keys router
 │   ├── services/
 │   │   ├── auth.py           # User auth logic
-│   │   ├── huggingface.py    # HF Hub API client
-│   │   ├── vllm_manager.py   # vLLM process lifecycle
+│   │   ├── vllm_manager.py   # vLLM config reader + health checker
 │   │   └── api_key.py        # Key CRUD logic
 │   ├── models/               # SQLAlchemy ORM models
 │   │   ├── base.py           # Declarative base
 │   │   ├── user.py           # User model
-│   │   ├── api_key.py        # API Key model
-│   │   └── served_model.py   # Served Model model
+│   │   └── api_key.py        # API Key model
 │   ├── schemas/              # Pydantic request/response schemas
 │   │   ├── auth.py
 │   │   ├── common.py
 │   │   ├── keys.py
-│   │   ├── models.py
 │   │   └── serve.py
 │   └── utils/
 │       ├── error_codes.py    # Standardized error codes
@@ -85,6 +83,40 @@ backend/
 ├── alembic.ini
 └── pyproject.toml            # uv-managed project config
 ```
+
+---
+
+## Key Concepts
+
+### Model Configuration
+
+Models are **not** managed via the API. They are declared at deploy time through environment variables:
+
+```env
+VLLM_MODEL_1=mistralai/Mistral-7B-Instruct-v0.3
+VLLM_MODEL_2=meta-llama/Llama-3-8B
+VLLM_MODEL_3=
+VLLM_MODEL_4=
+```
+
+The backend reads these settings and provides:
+- `GET /models` — public list of configured models with live health status
+- `GET /serve` — same list, but requires bearer auth
+
+The `VLLMManager` service probes each vLLM instance's `/health` endpoint to determine whether a model is `running` or still `loading`.
+
+### API Keys
+
+API keys are managed through the dashboard (bearer auth required):
+- `POST /keys` — create a new key (plaintext returned once)
+- `GET /keys` — list keys (prefix + metadata only)
+- `DELETE /keys/{id}` — revoke a key
+
+Keys are stored as bcrypt hashes. The `sk-ms_` prefix identifies ModelServe keys.
+
+### Auth Flow
+
+Users sign up / log in via email + password. The backend returns a JWT bearer token used for all authenticated endpoints (keys, serve listing).
 
 ---
 
@@ -111,32 +143,18 @@ backend/
 | `owner_id`     | UUID        | FK → `users.id`                              |
 | `name`         | TEXT        | User-provided label                          |
 | `key_hash`     | TEXT        | bcrypt hash — never store plaintext          |
-| `key_prefix`   | TEXT        | First 8 chars for display (e.g. `sk-ms_Ab1`) |
+| `key_prefix`   | TEXT        | First 12 chars for display (e.g. `sk-ms_Ab1`)|
 | `created_at`   | TIMESTAMPTZ |                                              |
 | `last_used_at` | TIMESTAMPTZ | Nullable                                     |
 | `is_active`    | BOOLEAN     | Soft delete                                  |
 
-#### `served_models`
-
-| Column         | Type        | Notes                                    |
-| -------------- | ----------- | ---------------------------------------- |
-| `id`           | UUID        | PK                                       |
-| `owner_id`     | UUID        | FK → `users.id`                          |
-| `model_id`     | TEXT        | HF model ID                              |
-| `display_name` | TEXT        |                                          |
-| `pipeline_tag` | TEXT        | e.g. `text-generation`                   |
-| `endpoint_url` | TEXT        | Internal vLLM endpoint                   |
-| `status`       | ENUM        | `pending`, `running`, `stopped`, `error` |
-| `gpu_type`     | ENUM        | `rocm` (schema retains `cuda` for compat) |
-| `container_id` | TEXT        | Docker container ID                      |
-| `started_at`   | TIMESTAMPTZ |                                          |
-| `stopped_at`   | TIMESTAMPTZ | Nullable                                 |
+> **Note:** The `served_models` table from v0.1.0 has been dropped. Model state is now ephemeral — determined by environment config + live health checks.
 
 ### Migrations
 
 ```bash
 # Create a new migration after changing ORM models
-uv run alembic revision --autogenerate -m "add_served_models_table"
+uv run alembic revision --autogenerate -m "description"
 
 # Apply locally
 uv run alembic upgrade head
@@ -165,5 +183,5 @@ uv run pytest -v --tb=short
 
 - Uses `pytest-asyncio` with `asyncio_mode = "auto"` (configured in `pyproject.toml`).
 - Route tests use `httpx.AsyncClient` + `ASGITransport` — never `TestClient`.
-- External calls (HF Hub, vLLM) are mocked at the service boundary.
+- vLLM health checks are not mocked — they simply fail (model status = `loading`) when no real vLLM is running.
 - Fixtures live in `tests/conftest.py`.

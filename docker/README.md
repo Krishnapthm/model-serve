@@ -1,6 +1,6 @@
 # Docker
 
-Docker Compose setup for ModelServe. Provides AMD ROCm GPU-accelerated and local development configurations.
+Docker Compose setup for ModelServe. AMD ROCm GPU-accelerated and local development configurations.
 
 ---
 
@@ -9,7 +9,7 @@ Docker Compose setup for ModelServe. Provides AMD ROCm GPU-accelerated and local
 | File                | Purpose                                         |
 | ------------------- | ----------------------------------------------- |
 | `compose.base.yml`  | Shared service config — extended by other files |
-| `compose.rocm.yml`  | AMD GPU stack (`/dev/kfd` + `/dev/dri`)         |
+| `compose.rocm.yml`  | AMD GPU stack — vLLM model slots via profiles   |
 | `compose.local.yml` | Local dev — DB + backend + frontend HMR, no GPU |
 
 ---
@@ -19,8 +19,15 @@ Docker Compose setup for ModelServe. Provides AMD ROCm GPU-accelerated and local
 ```bash
 # From repo root:
 
-# AMD ROCm
-docker compose -f docker/compose.rocm.yml up --build
+# Configure
+cp .env.example .env
+# Edit .env — set VLLM_MODEL_1, HF_TOKEN, SECRET_KEY, POSTGRES_PASSWORD
+
+# AMD ROCm — serve one model
+docker compose -f docker/compose.rocm.yml --profile vllm-1 up --build
+
+# AMD ROCm — serve two models
+docker compose -f docker/compose.rocm.yml --profile vllm-1 --profile vllm-2 up --build
 
 # Local development (no GPU)
 docker compose -f docker/compose.local.yml up --build
@@ -28,43 +35,64 @@ docker compose -f docker/compose.local.yml up --build
 
 ---
 
+## Model Configuration
+
+Models are declared via environment variables in `.env`:
+
+```env
+VLLM_MODEL_1=mistralai/Mistral-7B-Instruct-v0.3
+VLLM_MODEL_2=meta-llama/Llama-3-8B
+VLLM_MODEL_3=
+VLLM_MODEL_4=
+```
+
+Each slot is activated via a Compose profile:
+
+```bash
+# Activate slots 1 and 2
+docker compose -f docker/compose.rocm.yml --profile vllm-1 --profile vllm-2 up --build
+```
+
+Maximum 4 models can be served simultaneously.
+
+### First Run vs Subsequent Runs
+
+- **First run:** vLLM downloads model weights from HuggingFace into the `hf_cache` Docker volume. This takes time depending on model size and network speed.
+- **Subsequent runs:** Model weights are loaded from the `hf_cache` volume. Much faster startup.
+- **Cache lifetime:** The volume persists across `docker compose down` / `up` cycles. Use `docker volume rm <project>_hf_cache` to force a re-download.
+
+---
+
 ## Service Topology
 
 ```yaml
 services:
-  db: # PostgreSQL 17 — healthcheck enabled
-  backend: # FastAPI — depends on db, runs migrations on start
-  frontend: # Vite/React — serves on :3000
-  # vLLM containers are spawned dynamically by the backend via the Docker SDK.
+  db:        # PostgreSQL 17 — healthcheck enabled
+  backend:   # FastAPI — depends on db, runs migrations on start
+  frontend:  # Vite/React — serves on :3000
+  vllm-1:    # vLLM slot 1 (profile: vllm-1) — ROCm
+  vllm-2:    # vLLM slot 2 (profile: vllm-2) — ROCm
+  vllm-3:    # vLLM slot 3 (profile: vllm-3) — ROCm
+  vllm-4:    # vLLM slot 4 (profile: vllm-4) — ROCm
 ```
 
-### ROCm-specific Config
+### ROCm Configuration
 
-vLLM containers spawned at runtime use the official prebuilt image with these
-flags (mirroring the [vLLM ROCm docs](https://docs.vllm.ai/en/stable/deployment/docker/#amd-rocm)):
+vLLM services use the official prebuilt image with these ROCm flags (per [vLLM AMD docs](https://docs.vllm.ai/en/v0.4.1/getting_started/amd-installation.html)):
 
 ```yaml
 image: vllm/vllm-openai-rocm:latest
-ipc_mode: host
+ipc: host
 devices:
   - /dev/kfd
-  - /dev/dri/renderD128   # enumerated at runtime via glob — not passed as a dir
-  - /dev/dri/card0
+  - /dev/dri
 group_add:
-  - video   # GID for /dev/dri/card0
-  - render  # GID for /dev/kfd and /dev/dri/renderD128
+  - video
 cap_add:
   - SYS_PTRACE
 security_opt:
   - seccomp=unconfined
 ```
-
-> **Note:** The Docker Python SDK requires individual device *file* paths — passing
-> `/dev/dri` (a directory) silently skips the render nodes. `vllm_manager.py` uses
-> `glob.glob` to enumerate the actual files at container-spawn time.
-
-> **Known issue:** Containers are currently exiting immediately on this host.
-> See [docs/rocm-container-troubleshooting.md](../docs/rocm-container-troubleshooting.md).
 
 ---
 
@@ -92,18 +120,21 @@ Builds the Vite app and serves it on port 3000.
 
 ## Ports
 
-| Service    | Port | Description                  |
-| ---------- | ---- | ---------------------------- |
-| Frontend   | 3000 | React app                    |
-| Backend    | 8000 | FastAPI (OpenAPI at `/docs`) |
-| vLLM       | 8080 | OpenAI-compatible endpoint   |
-| PostgreSQL | 5432 | Internal only (not exposed)  |
+| Service    | Port | Description                     |
+| ---------- | ---- | ------------------------------- |
+| Frontend   | 3000 | React app                       |
+| Backend    | 8000 | FastAPI (OpenAPI at `/docs`)    |
+| vLLM-1     | 8081 | OpenAI-compatible endpoint      |
+| vLLM-2     | 8082 | OpenAI-compatible endpoint      |
+| vLLM-3     | 8083 | OpenAI-compatible endpoint      |
+| vLLM-4     | 8084 | OpenAI-compatible endpoint      |
+| PostgreSQL | 5432 | Internal only (not exposed)     |
 
 ---
 
 ## Volumes
 
-| Volume     | Purpose                     |
-| ---------- | --------------------------- |
-| `pgdata`   | PostgreSQL data persistence |
-| `hf_cache` | HuggingFace model cache     |
+| Volume     | Purpose                                                                 |
+| ---------- | ----------------------------------------------------------------------- |
+| `pgdata`   | PostgreSQL data persistence                                             |
+| `hf_cache` | HuggingFace model cache — survives restarts, prevents re-downloading   |

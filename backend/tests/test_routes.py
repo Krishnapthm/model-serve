@@ -1,4 +1,4 @@
-"""Tests for the health endpoint and app creation."""
+"""Tests for the health endpoint, models endpoint, and app creation."""
 
 import pytest
 from unittest.mock import AsyncMock
@@ -44,16 +44,19 @@ async def test_health():
 
 @pytest.mark.asyncio
 async def test_models_is_public():
-    """Models endpoint should be accessible without API key."""
+    """Models endpoint should be accessible without auth."""
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as client:
         resp = await client.get("/api/v1/models")
     assert resp.status_code == 200
+    body = resp.json()
+    assert "data" in body
+    assert isinstance(body["data"], list)
 
 
 @pytest.mark.asyncio
 async def test_serve_requires_auth():
-    """Serve endpoint should return 401 without API key."""
+    """Serve endpoint should return 401 without bearer token."""
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as client:
         resp = await client.get("/api/v1/serve")
@@ -62,8 +65,24 @@ async def test_serve_requires_auth():
 
 @pytest.mark.asyncio
 async def test_keys_requires_auth():
-    """Keys endpoint should return 401 without API key."""
+    """Keys endpoint should return 401 without bearer token."""
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as client:
         resp = await client.get("/api/v1/keys")
     assert resp.status_code == 401
+
+
+@pytest.mark.asyncio
+async def test_models_returns_configured():
+    """Models endpoint should return configured model slots."""
+    settings = Settings(vllm_model_1="org/test-model", vllm_host="localhost")
+    init_deps(session_factory=None, settings=settings)
+
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        resp = await client.get("/api/v1/models")
+    assert resp.status_code == 200
+    body = resp.json()
+    assert len(body["data"]) == 1
+    assert body["data"][0]["model_id"] == "org/test-model"
+    assert body["data"][0]["slot"] == 1
