@@ -1,6 +1,6 @@
 # Frontend
 
-React single-page application for ModelServe. Provides model browsing, one-click serving, API key management, and environment variable snippets.
+React single-page application for ModelServe. Provides model browsing, one-click serving, API key management, and copy-paste OpenAI SDK scripts for served models.
 
 ## Stack
 
@@ -46,6 +46,7 @@ frontend/
 │   │   │   ├── layout.tsx    # App shell layout
 │   │   │   ├── model-card.tsx
 │   │   │   ├── env-snippet.tsx
+│   │   │   ├── serve-script-dialog.tsx
 │   │   │   ├── status-badge.tsx
 │   │   │   └── protected-route.tsx
 │   │   ├── login-form.tsx
@@ -88,7 +89,7 @@ npx shadcn@latest add dialog
 npx shadcn@latest add sonner
 ```
 
-App-specific compositions (like `ModelCard`, `EnvSnippet`) live in `src/components/app/`.
+App-specific compositions (like `ModelCard` and `ServeScriptDialog`) live in `src/components/app/`.
 
 ---
 

@@ -106,7 +106,7 @@ export default function ModelsPage() {
                                 <ModelCard
                                     key={model.id}
                                     model={model}
-                                    onServe={(id) => serveMutation.mutate({ model_id: id, gpu_type: "cuda" })}
+                                    onServe={(id) => serveMutation.mutate({ model_id: id })}
                                     isServing={serveMutation.isPending}
                                 />
                             ))

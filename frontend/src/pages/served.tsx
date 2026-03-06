@@ -1,8 +1,9 @@
-/** Served models page — list running models, status, env snippets, stop. */
+/** Served models page — list running models, status, script dialog, stop. */
 
+import { useState } from "react";
 import { useServedModels, useStopModel } from "@/hooks/useServe";
 import { StatusBadge } from "@/components/app/status-badge";
-import { EnvSnippet } from "@/components/app/env-snippet";
+import { ServeScriptDialog } from "@/components/app/serve-script-dialog";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -19,10 +20,25 @@ import {
     AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { IconPlayerStop, IconServer } from "@tabler/icons-react";
+import type { ServedModel } from "@/types/serve";
 
 export default function ServedPage() {
     const { data: models, isLoading } = useServedModels();
     const stopMutation = useStopModel();
+    const [selectedModel, setSelectedModel] = useState<ServedModel | null>(null);
+    const [scriptDialogOpen, setScriptDialogOpen] = useState(false);
+
+    const openScriptDialog = (model: ServedModel) => {
+        setSelectedModel(model);
+        setScriptDialogOpen(true);
+    };
+
+    const handleScriptDialogOpenChange = (open: boolean) => {
+        setScriptDialogOpen(open);
+        if (!open) {
+            setSelectedModel(null);
+        }
+    };
 
     if (isLoading) {
         return (
@@ -64,7 +80,19 @@ export default function ServedPage() {
                         </Card>
                     ) : (
                         models.map((model) => (
-                            <Card key={model.id}>
+                            <Card
+                                key={model.id}
+                                role="button"
+                                tabIndex={0}
+                                onClick={() => openScriptDialog(model)}
+                                onKeyDown={(e) => {
+                                    if (e.key === "Enter" || e.key === " ") {
+                                        e.preventDefault();
+                                        openScriptDialog(model);
+                                    }
+                                }}
+                                className="cursor-pointer hover:border-border transition-colors"
+                            >
                                 <CardHeader className="pb-3">
                                     <div className="flex items-center justify-between">
                                         <div className="space-y-1">
@@ -76,7 +104,13 @@ export default function ServedPage() {
                                             {(model.status === "running" || model.status === "pending") && (
                                                 <AlertDialog>
                                                     <AlertDialogTrigger asChild>
-                                                        <Button size="sm" variant="outline" className="text-destructive">
+                                                        <Button
+                                                            size="sm"
+                                                            variant="outline"
+                                                            className="text-destructive"
+                                                            onClick={(e) => e.stopPropagation()}
+                                                            onKeyDown={(e) => e.stopPropagation()}
+                                                        >
                                                             <IconPlayerStop size={14} className="mr-1" />
                                                             Stop
                                                         </Button>
@@ -105,12 +139,9 @@ export default function ServedPage() {
                                     </div>
                                 </CardHeader>
                                 <CardContent>
-                                    {model.env_snippet && model.status === "running" && (
-                                        <EnvSnippet
-                                            apiKey={model.env_snippet.OPENAI_API_KEY}
-                                            baseUrl={model.env_snippet.OPENAI_BASE_URL}
-                                        />
-                                    )}
+                                    <p className="text-xs text-muted-foreground">
+                                        Click this card to open a copy-paste Python example script.
+                                    </p>
                                     <div className="flex gap-4 mt-3 text-xs text-muted-foreground">
                                         <span>GPU: {model.gpu_type.toUpperCase()}</span>
                                         <span>Started: {new Date(model.started_at).toLocaleString()}</span>
@@ -124,6 +155,12 @@ export default function ServedPage() {
                     )}
                 </div>
             </ScrollArea>
+
+            <ServeScriptDialog
+                model={selectedModel}
+                open={scriptDialogOpen}
+                onOpenChange={handleScriptDialogOpenChange}
+            />
         </div>
     );
 }

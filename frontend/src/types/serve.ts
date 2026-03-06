@@ -20,5 +20,5 @@ export interface ServedModel {
 
 export interface ServeRequest {
     model_id: string;
-    gpu_type: string;
+    gpu_type?: string;  // omit to let the server use its configured VLLM_GPU_TYPE
 }
